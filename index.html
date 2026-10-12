@@ -151,7 +151,17 @@ table.order td { font-size: 15px; }
   table.order.stack td { display: flex; justify-content: space-between; gap: 12px; }
   table.order.stack td[data-label]:not(.lead)::before { display: inline; font-size: 14px; font-weight: 500; }
   table.order.stack td.lead { display: block; }
+  /* Rekordy jako karty: nazwa ćwiczenia na górze, pod nią wartości „etykieta … wartość”. */
+  table.stack.sticky-first td:first-child { position: static; box-shadow: none; }
+  table.rec.stack tr { display: flex; flex-direction: column; }
+  table.rec.stack td { display: flex; justify-content: space-between; gap: 12px; text-align: right; }
+  table.rec.stack td.lead { order: -1; display: block; text-align: left; font-weight: 600; }
+  table.rec.stack td[data-label]:not(.lead)::before { display: inline; font-size: 14px; font-weight: 500; text-align: left; }
 }
+/* Sortowanie rekordów na wąskim ekranie (nagłówki tabeli są wtedy ukryte). */
+.rec-sort { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 15px; color: var(--text-secondary); }
+.rec-sort select { min-height: 44px; background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--control-border); border-radius: 8px; padding: 8px 10px; font: inherit; flex: 1; min-width: 0; }
+@media (min-width: 701px) { .rec-sort { display: none; } }
 .hb-track { position: relative; display: block; height: 14px; }
 .hb-band { position: absolute; top: 0; bottom: 0; background: rgba(255,255,255,0.06); border-left: 1px dashed var(--text-muted); border-right: 1px dashed var(--text-muted); }
 .hb-base { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 1.5px dashed var(--text-muted); }
@@ -464,6 +474,8 @@ nav.jump a[aria-current="true"] { background: #dcdacf; color: #0d0d0d; font-weig
       <p>Szacowany 1RM liczony wzorem Epleya: ciężar × (1 + powtórzenia / 30). Serie rozgrzewkowe nie są wliczane do rekordów ani objętości.</p>
       <p id="rare-rule"></p>
     </div>
+    <div class="rec-sort"><label for="rec-sort-key">Sortuj według</label><select id="rec-sort-key"></select>
+      <button type="button" class="btn" id="rec-sort-dir"></button></div>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela rekordów"><table id="records" class="sticky-first"></table></div>
     <div class="more" id="records-more"></div>
   </section>
@@ -2113,7 +2125,8 @@ function renderRecords() {
   const fill = (t, list) => {
     t.innerHTML = `<thead><tr>${COLS.map(c =>
       `<th data-key="${c.key}" class="sortable${c.num ? " num" : ""}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}"><button type="button">${esc(c.label)}<span class="arrow" aria-hidden="true">${c.key === sortKey ? (sortDir > 0 ? "▲" : "▼") : ""}</span></button></th>`).join("")}</tr></thead>
-      <tbody>${list.map(e => `<tr>${COLS.map(c => `<td class="${c.num ? "num" : ""}">${cell(e, c.key)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+      <tbody>${list.map(e => `<tr>${COLS.map((c, i) => `<td class="${c.num ? "num" : ""}${i === 1 ? " lead" : ""}" data-label="${esc(c.label)}"><span>${cell(e, c.key)}</span></td>`).join("")}</tr>`).join("")}</tbody>`;
+    t.className = "sticky-first rec stack";
     t.querySelectorAll("th button").forEach(btn => btn.addEventListener("click", () => {
       const k = btn.closest("th").dataset.key;
       sortDir = k === sortKey ? -sortDir : (k === "name" ? 1 : -1);
@@ -2123,6 +2136,10 @@ function renderRecords() {
     }));
   };
   fill($("#records"), rows.filter(e => !rare.includes(e)));
+  // Sortowanie na wąskim ekranie: to samo sortKey / sortDir co w nagłówkach.
+  $("#rec-sort-key").innerHTML = COLS.map(c => `<option value="${c.key}"${c.key === sortKey ? " selected" : ""}>${esc(c.label)}</option>`).join("");
+  $("#rec-sort-dir").textContent = sortDir > 0 ? "▲ rosnąco" : "▼ malejąco";
+  $("#rec-sort-dir").setAttribute("aria-label", `Kierunek sortowania: ${sortDir > 0 ? "rosnąco" : "malejąco"}`);
   const rule = `Rzadkie ćwiczenia: najwyżej ${CFG.rareMaxSessions} ${plTrening(CFG.rareMaxSessions)}, ostatni ponad ${CFG.rareStaleDays} dni przed najnowszym treningiem (${fmtDate(latest)}). ` +
     `Ustawienia: CFG.rareMaxSessions i CFG.rareStaleDays.`;
   $("#rare-rule").textContent = rule + " Są w zwiniętej grupie pod główną tabelą.";
@@ -2150,6 +2167,12 @@ document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click"
   document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   if (MODEL) renderProgress();
 }));
+$("#rec-sort-key").addEventListener("change", ev => {
+  sortKey = ev.target.value;
+  sortDir = sortKey === "name" ? 1 : -1;
+  if (MODEL) renderRecords();
+});
+$("#rec-sort-dir").addEventListener("click", () => { sortDir = -sortDir; if (MODEL) renderRecords(); });
 $("#file").addEventListener("change", ev => {
   const f = ev.target.files[0];
   if (!f) return;
