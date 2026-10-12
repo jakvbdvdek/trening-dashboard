@@ -272,6 +272,10 @@ nav.jump a[aria-current="true"] { background: #dcdacf; color: #0d0d0d; font-weig
 .order-sum .lbl { color: var(--text-secondary); }
 .order-sum b { font-variant-numeric: tabular-nums; }
 .rare-note { color: var(--text-muted); font-size: 14px; margin: 4px 0 8px; }
+/* Stan planu w nagłówku. */
+.plan-state { margin-top: 10px; max-width: 760px; }
+.plan-state .ps-level { margin: 0; font-size: 17px; font-weight: 650; }
+.plan-state .help { margin-top: 4px; }
 
 #tip {
   position: fixed; z-index: 10; pointer-events: none; max-width: min(300px, calc(100vw - 16px));
@@ -292,7 +296,13 @@ nav.jump a[aria-current="true"] { background: #dcdacf; color: #0d0d0d; font-weig
     <div>
       <h1>Dashboard treningowy</h1>
       <p class="sub" id="range"></p>
-      <p class="sub small muted" id="phase"></p>
+      <div class="plan-state">
+        <p class="ps-level" id="ps-level"></p>
+        <p class="sub small" id="ps-why"></p>
+        <p class="sub small" id="ps-hint" hidden></p>
+        <button type="button" class="disc" aria-expanded="false" aria-controls="help-plan">Jak to czytać?</button>
+        <div class="help" id="help-plan" hidden></div>
+      </div>
       <p class="sub small muted" id="targets"></p>
     </div>
     <label class="btn" title="Wybierz nowszy eksport z Hevy (CSV)">
@@ -865,8 +875,12 @@ const CFG = {
   durationBand: [60, 75],  // docelowa długość treningu (min)
   weeklySetsBase: 9,       // obecny poziom serii / partię / tydzień
   quadHamMaxRatio: 2.5,    // ostrzeżenie, gdy czworogłowe dostają więcej niż tyle razy serii co dwugłowe (plan celowo 2 : 1)
-  weeklySetsPhase2: [10, 20],
-  phase1End: new Date(2026, 9, 31),
+  weeklySetsTarget: [10, 20],   // zakres docelowy serii / partię / tydzień
+  // Stan planu (nagłówek): zmiana planu wynika z wyników, nie z kalendarza.
+  planWindowDays: 28,      // okno oceny: tyle ostatnich dni od najnowszego treningu
+  planProgressShare: 0.5,  // „plan działa”: ciężar roboczy wzrósł w co najmniej takiej części ćwiczeń
+  planStallMain: 3,        // „czas na przegląd planu”: tyle głównych ćwiczeń (złożonych) w zastoju jednocześnie
+  planMinPerWeek: 2.5,     // poniżej tylu treningów / tydz. w oknie najpierw regularność, nie zmiana planu
   // Aliasy (błędnie wybrane ćwiczenia) i okresy maszyn są w decyzje.md (typy „alias” i „maszyna”).
 };
 // Rodziny ruchu: zamienniki robiące te same partie (gdy maszyna zajęta) trafiają do jednej grupy.
@@ -1436,9 +1450,6 @@ function renderKPIs() {
   const totalMin = sum(timed, w => w.minutes);
   const first = workouts[0].start, last = workouts[workouts.length - 1].start;
   $("#range").textContent = `${fmtDateLong(first)} – ${fmtDateLong(last)}`;
-  const left = dayDiff(new Date(), CFG.phase1End);
-  $("#phase").textContent = `Faza 1 do ${fmtDate(CFG.phase1End)}` +
-    (left >= 0 ? ` (za ${left} ${plDni(left)})` : " (termin minął; czas na ocenę)") + " · szczegóły: zalozenia_treningowe.md, sekcja 11";
   $("#merged").textContent = "Z decyzje.md: " + [
     ...ALIASES.map(a => `${a.ex} ${a.until ? `od ${dm(a.from)} do ${dm(shiftDay(a.until, -1))} ` : ""}liczę jako ${a.to}`),
     ...PERIODS.map(p => p.assigned ? `${p.ex} od ${dm(p.from)} do ${dm(shiftDay(p.to, -1))} liczę jako ${p.name} (korekta okresu niepewnego)`
@@ -1520,11 +1531,25 @@ function exStats(e) {
   const li = info[info.length - 1];          // ostatnia sesja (do wyświetlenia)
   const lf = full[full.length - 1] || li;     // ostatnia pełna sesja (do oceny)
   const kgNow = lf.kg;
-  let streak = 0, unclean = 0;
+  let streak = 0, run = 0;
   for (let i = full.length - 1; i >= 0 && full[i].kg === kgNow && full[i].clean; i--) streak++;
-  for (let i = full.length - 1; i >= 0 && full[i].kg === kgNow && !full[i].clean; i--) unclean++;
-  return { info, full, li, lf, kgNow, streak, unclean };
+  for (let i = full.length - 1; i >= 0 && full[i].kg === kgNow && !full[i].clean; i--) run++;
+  // Przyczyna przeanalizowana: wpis w decyzje.md dla ćwiczenia (STALL_DECISION_TYPES) z datą po początku serii nieczystych
+  // treningów przerywa licznik; liczą się tylko treningi od dnia decyzji. Ponownie CFG.stallSessions nieczystych = nowy zastój.
+  // Decyzje po kolei: każda z datą po początku bieżącego licznika go przerywa; „analyzed” = ostatnia decyzja, przed którą był zastój.
+  let seg = full.slice(full.length - run), analyzed = null;
+  for (const d of exDecisions(e)) {
+    if (!seg.length || dayDiff(seg[0].p.date, d.date) <= 0) continue;
+    const before = seg.filter(x => x.p.date < d.date).length;
+    if (before >= CFG.stallSessions) analyzed = { d, before };
+    seg = seg.filter(x => x.p.date >= d.date);
+  }
+  return { info, full, li, lf, kgNow, streak, unclean: seg.length, analyzed };
 }
+// Wpisy decyzje.md, które przerywają licznik zastoju (dla ćwiczenia albo jego ćwiczenia źródłowego w Hevy), rosnąco po dacie.
+const STALL_DECISION_TYPES = new Set(["ciezar", "kolejnosc", "zasada", "maszyna"]);
+const exDecisions = e => DECISIONS.filter(d => (d.ex === e.name || d.ex === sourceOf(e.name)) && STALL_DECISION_TYPES.has(d.type))
+  .sort((a, b) => a.date - b.date);
 
 // Wpis „ciezar” w decyzje.md po ostatnim treningu tej maszyny: decyzja już zapadła, sygnał z danych jest nieaktualny.
 const decisionAfter = (e, s) => DECISIONS.filter(x => x.type === "ciezar" && x.ex === e.name && dayDiff(s.li.p.date, x.date) > 0)
@@ -1808,10 +1833,29 @@ function renderPlateaus() {
   const ex = MODEL.exercises.filter(e => e.kind === "weight" && e.progress.length >= 2 && !isClosed(e.name))
     .map(e => ({ e, s: exStats(e) })).filter(x => x.s).map(x => ({ ...x, dec: decisionAfter(x.e, x.s) }));
   const stalls = ex.filter(x => x.s.unclean >= CFG.stallSessions).sort((a, b) => b.s.unclean - a.s.unclean);
+  // Przyczyna przeanalizowana: zastój sprzed wpisu w decyzje.md, po decyzji jeszcze bez nowego zastoju.
+  const analyzed = ex.filter(x => x.s.analyzed && x.s.unclean < CFG.stallSessions);
   const overdue = ex.filter(x => x.s.streak >= CFG.overdueSessions && !x.dec);
   const watch = ex.filter(x => x.s.unclean === CFG.stallSessions - 1 && !x.dec).map(x => x.e.name);
 
-  let html = stalls.map(({ e, s, dec }) => {
+  const runTable = (runs, name) => `<div class="tbl"><table><thead><tr><th>Data</th><th>Powtórzenia</th><th>Pozycja</th><th>Przerwa</th><th>RPE</th></tr></thead><tbody>${runs.map(x => {
+    const w = x.p.workout, wi = ws.indexOf(w), n = seqOf(w).length, pos = seqOf(w).indexOf(name) + 1;
+    const rest = wi > 0 ? dayDiff(ws[wi - 1].start, w.start) : null;
+    return `<tr><td>${esc(fmtDate(x.p.date))}</td><td><b>${esc(x.reps.join("/"))}</b> <span class="dim">z ${x.target}</span></td><td>${pos}. z ${n}</td>
+      <td>${rest != null ? `${rest} ${plDni(rest)}` : "–"}</td><td>${x.rpe != null ? esc(nf(x.rpe, 1)) : "–"}</td></tr>`;
+  }).join("")}</tbody></table></div>`;
+  let html = analyzed.map(({ e, s }) => {
+    const { d, before } = s.analyzed, runs = s.full.filter(x => x.kg === s.kgNow && x.p.date < d.date).slice(-before);
+    return `<div class="plateau">
+      <div><div class="name">${esc(e.name)} <span class="badge st-old">◆ Przyczyna przeanalizowana</span></div>
+        <div class="det">${esc(fmtDate(d.date))} · ${esc(d.type)}: ${esc(d.change)}.</div>
+        <div class="det dim">Wcześniej ${before} ${plTrening(before)} z rzędu na ${esc(kg(s.kgNow))} bez czystego ${CFG.sets} × cel. Licznik liczy od decyzji:
+          ${s.unclean} ${plTrening(s.unclean)} bez czystego wyniku; ${CFG.stallSessions} oznaczają nowy zastój.</div>
+        ${runTable(runs, e.name)}</div>
+      <div class="adv"><b style="color:var(--text-primary)">Powód (decyzje.md)</b><p>${esc(d.why)}</p></div>
+    </div>`;
+  }).join("");
+  html += stalls.map(({ e, s }) => {
     const runs = s.full.slice(-s.unclean);
     const pos = runs.map(x => seqOf(x.p.workout).indexOf(e.name) + 1);
     const rows = runs.map((x, k) => {
@@ -1827,24 +1871,19 @@ function renderPlateaus() {
     if (runs.some(x => x.top.some(z => z.type === "failure"))) hints.push("Były serie do upadku. W ćwiczeniach złożonych to nie jest standard.");
     if (runs.some(x => x.work.length < CFG.sets)) hints.push("Nie zawsze były pełne 3 serie robocze.");
     hints.push("Sprawdź też technikę i regenerację: sen i odstęp od poprzedniego treningu (kolumna „Przerwa”).");
-    // Po ostatnim treningu jest wpis „ciezar” w decyzje.md: zamiast zastoju pokazuję podjętą decyzję.
-    const head = dec
-      ? `<div class="name">${esc(e.name)} <span class="badge st-old">◆ Decyzja podjęta</span></div>
-        <div class="det">${esc(fmtDate(dec.date))}: ${esc(dec.change)}.</div>
-        <div class="det dim">Wcześniej ${s.unclean} ${plTrening(s.unclean)} z rzędu na ${esc(kg(s.kgNow))} bez czystego ${CFG.sets} × cel.</div>`
-      : `<div class="name">${esc(e.name)} <span class="badge st-stall">■ Zastój</span></div>
-        <div class="det">${s.unclean} ${plTrening(s.unclean)} z rzędu na ${esc(kg(s.kgNow))} bez czystego ${CFG.sets} × cel (cel z dnia treningu).</div>`;
-    const side = dec
-      ? `<b style="color:var(--text-primary)">Powód (decyzje.md)</b><p>${esc(dec.why)}</p>`
-      : `<b style="color:var(--text-primary)">Możliwe przyczyny</b><ul>${hints.map(h => `<li>${esc(h)}</li>`).join("")}</ul>`;
+    // Zastój po wcześniejszej decyzji: licznik liczony od decyzji, to nowy zastój.
+    const head = `<div class="name">${esc(e.name)} <span class="badge st-stall">■ Zastój</span></div>
+        <div class="det">${s.unclean} ${plTrening(s.unclean)} z rzędu na ${esc(kg(s.kgNow))} bez czystego ${CFG.sets} × cel (cel z dnia treningu).</div>` +
+      (s.analyzed ? `<div class="det dim">Nowy zastój po decyzji z ${esc(fmtDate(s.analyzed.d.date))} (${esc(s.analyzed.d.type)}: ${esc(s.analyzed.d.change)}).</div>` : "");
+    const side = `<b style="color:var(--text-primary)">Możliwe przyczyny</b><ul>${hints.map(h => `<li>${esc(h)}</li>`).join("")}</ul>`;
     return `<div class="plateau">
       <div>${head}
         <div class="tbl"><table><thead><tr><th>Data</th><th>Powtórzenia</th><th>Pozycja</th><th>Przerwa</th><th>RPE</th></tr></thead><tbody>${rows}</tbody></table></div></div>
       <div class="adv">${side}</div>
     </div>`;
   }).join("");
-  if (!stalls.some(x => !x.dec)) html += `<div class="info"${stalls.length ? ' style="margin-top:12px"' : ""}><span class="ic ok">✓</span><span>${stalls.length
-    ? "Brak innych zastojów" : "Brak zastojów"}: nigdzie ${stalls.length ? "więcej " : ""}nie ma ${CFG.stallSessions} treningów z rzędu na tym samym ciężarze bez czystego ${CFG.sets} × cel.</span></div>`;
+  if (!stalls.length) html += `<div class="info"${analyzed.length ? ' style="margin-top:12px"' : ""}><span class="ic ok">✓</span><span>${analyzed.length
+    ? "Brak innych zastojów" : "Brak zastojów"}: nigdzie ${analyzed.length ? "więcej " : ""}nie ma ${CFG.stallSessions} treningów z rzędu na tym samym ciężarze bez czystego ${CFG.sets} × cel.</span></div>`;
   if (overdue.length) html += `<div class="info" style="margin-top:12px"><span class="ic ok">▲</span><span>Zaległe podniesienia: ${esc(overdue.map(({ e, s }) =>
     `${short(e.name)} (${s.streak} ${plTrening(s.streak)} czysto na ${kg(s.kgNow)})`).join(", "))}.</span></div>`;
   if (watch.length) html += `<p class="only-once">Do obserwacji (${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego ${CFG.sets} × cel): ${esc(watch.map(short).join(", "))}.</p>`;
@@ -1852,7 +1891,60 @@ function renderPlateaus() {
   $("#help-plateaus").innerHTML = `<p><b>Zastój</b> = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego ${CFG.sets} × cel (cel z dnia treningu).
       Najpierw szukamy przyczyny, potem zmieniamy ciężar lub objętość.</p>
     <p><b>Zaległe podniesienie</b> = ${CFG.overdueSessions} czyste treningi z rzędu na tym samym ciężarze. <b>Do obserwacji</b> = ${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego wyniku.</p>
-    <p>Gdy po ostatnim treningu jest wpis „ciezar” w decyzje.md, zamiast zastoju widać podjętą decyzję i jej powód.</p>`;
+    <p><b>Przyczyna przeanalizowana</b>: po początku zastoju jest wpis w decyzje.md dla tego ćwiczenia (ciezar, kolejnosc, zasada albo maszyna).
+      Treningi sprzed decyzji nie liczą się już do zastoju; licznik startuje od dnia decyzji. Jeśli po decyzji znów ${CFG.stallSessions} pełne treningi
+      nie wyjdą czysto, to nowy zastój. Ta sama reguła działa we wskaźniku „Stan planu” i w sygnałach.</p>`;
+}
+
+// ---------- Stan planu (nagłówek) ----------
+// Okno: ostatnie CFG.planWindowDays dni od najnowszego treningu. Ćwiczenia aktywne = z ciężarem, używane w ostatnich
+// CFG.signalsActiveDays dniach, bez zamkniętych okresów i okresów niepewnych (jak w sygnałach).
+//  - zastój w głównych (kategorie złożone): ta sama logika co w sekcji „Zastoje” (licznik od decyzji z decyzje.md, exStats),
+//  - wzrost ciężaru: ciężar roboczy z ostatniego pełnego treningu wobec ostatniego pełnego treningu sprzed okna;
+//    bez ćwiczeń nowych (brak treningu sprzed okna) i z wpisem „ciezar” od początku okna (świadome zejście / powrót),
+//  - regularność: treningi w oknie / tygodnie okna.
+function planState() {
+  const ws = MODEL.workouts, latest = ws[ws.length - 1].start;
+  const from = addDays(midnight(latest), -CFG.planWindowDays), weeksN = CFG.planWindowDays / 7;
+  if (ws[0].start >= from) return { level: "none" };
+  const decisionsFor = e => DECISIONS.filter(d => d.ex === e.name || d.ex === sourceOf(e.name));
+  const active = MODEL.exercises.filter(e => e.kind === "weight" && !isClosed(e.name) &&
+      dayDiff(new Date(Math.max(...e.sets.map(s => +s.workout.start))), latest) <= CFG.signalsActiveDays)
+    .map(e => ({ e, s: exStats(e) })).filter(x => x.s);
+  // Zastój jak w sekcji „Zastoje” (exStats: licznik od decyzji z decyzje.md po początku zastoju).
+  const stalls = active.filter(({ e, s }) => COMPOUND.has(categoryOf(e.name, latest)) && s.unclean >= CFG.stallSessions).map(x => x.e.name);
+  const compared = active.filter(({ e, s }) => s.full.some(x => x.p.date < from) &&
+      !decisionsFor(e).some(d => d.type === "ciezar" && d.date >= from))
+    .map(({ e, s }) => ({ name: e.name, up: s.lf.kg > s.full.filter(x => x.p.date < from).pop().kg }));
+  const grew = compared.filter(x => x.up).length;
+  const perWeek = ws.filter(w => w.start >= from).length / weeksN;
+  if (!compared.length) return { level: "none" };
+  const share = grew / compared.length;
+  let level = stalls.length >= CFG.planStallMain ? "red" : stalls.length >= 2 || share < CFG.planProgressShare ? "yellow" : "green";
+  if (level !== "green" && perWeek < CFG.planMinPerWeek) level = "regularity";
+  return { level, stalls, grew, compared, perWeek, weeksN };
+}
+
+function renderPlanState() {
+  const st = planState();
+  const LABEL = { green: "🟢 Plan działa", yellow: "🟡 Do obserwacji", red: "🔴 Czas na przegląd planu", none: "⚪ Stan planu: za mało danych" };
+  const perWeek = st.perWeek != null ? `${nf(st.perWeek, 1)} treningu/tydz.` : "";
+  $("#ps-level").textContent = st.level === "regularity" ? `🟠 Progres hamuje, ale najpierw regularność (${perWeek})` : LABEL[st.level];
+  $("#ps-why").textContent = st.level === "none"
+    ? `Ocena potrzebuje historii dłuższej niż ${CFG.planWindowDays} dni i ćwiczeń z treningiem sprzed tego okresu.`
+    : `Ciężar wzrósł w ${st.grew} z ${st.compared.length} ćwiczeń w ${st.weeksN} tyg.; zastój w głównych: ${st.stalls.length ? st.stalls.map(short).join(", ") : "brak"}; ${perWeek}`;
+  const hint = $("#ps-hint");
+  hint.hidden = st.level !== "yellow";
+  hint.textContent = "Sprawdź kolejność ćwiczeń (Kontrola kolejności), przerwy między treningami (Kalendarz) i regularność.";
+  $("#help-plan").innerHTML = `<p>Zmiana planu wynika z wyników, nie z kalendarza. Ocena z ostatnich ${CFG.planWindowDays} dni (CFG.planWindowDays) przed najnowszym treningiem.</p>
+    <ul>
+      <li><b>🟢 Plan działa:</b> ciężar roboczy wzrósł w co najmniej ${nf(CFG.planProgressShare * 100)}% ćwiczeń (CFG.planProgressShare) i najwyżej 1 główne ćwiczenie w zastoju.</li>
+      <li><b>🟡 Do obserwacji:</b> 2 główne ćwiczenia w zastoju albo wzrost w mniej niż ${nf(CFG.planProgressShare * 100)}% ćwiczeń.</li>
+      <li><b>🔴 Czas na przegląd planu:</b> co najmniej ${CFG.planStallMain} główne ćwiczenia w zastoju jednocześnie (CFG.planStallMain).</li>
+      <li><b>🟠 Najpierw regularność:</b> zamiast 🟡 / 🔴, gdy w oknie jest mniej niż ${nf(CFG.planMinPerWeek, 1)} treningu/tydz. (CFG.planMinPerWeek).</li>
+    </ul>
+    <p>Główne ćwiczenia: złożone (kategorie zlozone_maszyna i zlozone_wolne). Zastój jak w sekcji „Zastoje”: wpis w decyzje.md dla ćwiczenia (ciezar, kolejnosc, zasada, maszyna) po początku zastoju przerywa licznik, a nowy zastój liczy się od decyzji.
+      Wzrost: ciężar roboczy z ostatniego pełnego treningu wobec ostatniego pełnego treningu sprzed okna, dla aktywnych maszyn; bez ćwiczeń nowych, z wpisem ciezar od początku okna i z masą ciała.</p>`;
 }
 
 // ---------- Progres wg rodzin ruchu ----------
@@ -2045,7 +2137,7 @@ function renderMuscles() {
   const push = avg("Klatka") + avg("Barki") + avg("Triceps"), pull = avg("Plecy") + avg("Biceps") + avg("Tył barków");
   if (push > 0 && pull === 0) warn.push("Brak ćwiczeń ciągnących (plecy, biceps, tył barków). Dodaj wiosłowanie i ściąganie drążka.");
   else if (pull > 0 && push / pull > 1.25)
-    warn.push(`Push : pull ≈ ${nf(push / pull, 1)} : 1. Ćwiczenia pchające (klatka, barki, triceps) dostają średnio ${nf(push, 1)} serii/tydz., ciągnące (plecy, biceps, tył barków) ${nf(pull, 1)}, w tym same plecy tylko ${nf(avg("Plecy"), 1)}. Ciągnięcia powinno być mniej więcej tyle co pchania; wyrównuje je praca pleców i tyłu barków w planie. Według założeń objętość zwiększamy dopiero przy zastoju, więc dodatkowe serie pleców to temat na ocenę fazy 1.`);
+    warn.push(`Push : pull ≈ ${nf(push / pull, 1)} : 1. Ćwiczenia pchające (klatka, barki, triceps) dostają średnio ${nf(push, 1)} serii/tydz., ciągnące (plecy, biceps, tył barków) ${nf(pull, 1)}, w tym same plecy tylko ${nf(avg("Plecy"), 1)}. Ciągnięcia powinno być mniej więcej tyle co pchania; wyrównuje je praca pleców i tyłu barków w planie. Według założeń objętość zwiększamy dopiero przy zastoju, więc dodatkowe serie pleców to temat na przegląd planu (wskaźnik „Stan planu”).`);
   const q = avg("Czworogłowe uda"), h = avg("Dwugłowe uda");
   if (q > 0 && h === 0) warn.push("Brak ćwiczeń na dwugłowe uda (np. uginanie nóg, martwy ciąg rumuński).");
   else if (h > 0 && q / h > CFG.quadHamMaxRatio) warn.push(`Czworogłowe dostają ${nf(q / h, 1)}× więcej serii niż dwugłowe uda. Dodaj uginanie nóg lub martwy ciąg rumuński.`);
@@ -2065,7 +2157,7 @@ function renderMuscles() {
     warn.map(t => `<div class="warn"><span class="ic">⚠</span><span>${esc(t)}</span></div>`).join("") +
     info.map(t => `<div class="info"><span class="ic">ℹ</span><span>${esc(t)}</span></div>`).join("");
 
-  const [p2lo, p2hi] = CFG.weeklySetsPhase2;
+  const [p2lo, p2hi] = CFG.weeklySetsTarget;
   const scale = Math.max(p2hi, ...rows.map(avg));
   const pct = v => (v / scale) * 100;
   $("#muscle-avg").innerHTML = rows.map(g => `<div class="hbar" title="${esc(g)}: ${esc(nf(avg(g), 1))} serii/tydz.">
@@ -2073,7 +2165,7 @@ function renderMuscles() {
       <span class="hb-track"><span class="hb-band" style="left:${pct(p2lo)}%;width:${pct(p2hi - p2lo)}%"></span><span class="hb-base" style="left:${pct(CFG.weeklySetsBase)}%"></span><span class="hb-fill" style="width:${pct(avg(g))}%"></span></span>
       <span class="hb-val">${esc(nf(avg(g), 1))}</span></div>`).join("") +
     `<div class="hb-legend"><span><i style="width:0;height:12px;border-left:1.5px dashed var(--text-muted)"></i>${CFG.weeklySetsBase} = obecny poziom</span>
-      <span><i style="width:14px;height:10px;background:rgba(255,255,255,0.12);border-radius:2px"></i>${p2lo}–${p2hi} = cel fazy 2</span></div>`;
+      <span><i style="width:14px;height:10px;background:rgba(255,255,255,0.12);border-radius:2px"></i>${p2lo}–${p2hi} = zakres docelowy</span></div>`;
 
   const maxCell = Math.max(...rows.flatMap(g => groups.get(g)), 1);
   $("#muscle-heat").innerHTML = `<thead><tr><th class="rl"></th>${wk.map(w => `<th>${esc(fmtDate(w.start))}</th>`).join("")}<th class="tot">Razem</th></tr></thead>
@@ -2307,7 +2399,7 @@ function renderRecords() {
 }
 
 function renderCharts() { renderProgress(); renderWeekly(); renderVolume(); renderTempo(); }
-function render() { renderKPIs(); renderSignals(); renderOrder(); renderPlateaus(); renderCharts(); renderMuscles(); renderCalendar(); renderRecords(); }
+function render() { renderKPIs(); renderPlanState();renderSignals(); renderOrder(); renderPlateaus(); renderCharts(); renderMuscles(); renderCalendar(); renderRecords(); }
 
 function load(text) {
   const model = buildModel(parseCSV(text));
