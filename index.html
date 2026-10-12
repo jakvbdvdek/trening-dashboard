@@ -832,6 +832,7 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-10-11 | Knee Raise Parallel Bars | zasada | Bez stałego celu powtórzeń; serie z zapasem ok. 1 powtórzenia; ocena względem poprzedniego treningu tego ćwiczenia (suma powtórzeń z serii roboczych) | Sztywny cel 3 × 15 nie ma sensu przy tym ćwiczeniu; 1.10: 18/12/8 = 38, 11.10: 20/14/9 = 43 |
 | 2026-10-12 | Preacher Curl (Machine) | ciezar | Powrót z 18 na 20 kg | Decyzja Jakuba po czystym 3 × 12 na 18 kg (11.10, RPE 7–8,5) |
 | 2026-10-13 | * | zasada | Trzy rutyny FBW_A, FBW_B, FBW_C robione po kolei zamiast FBW_Klata+ / FBW_Plecy+; nowe ćwiczenia Lateral Raise (Dumbbell) i Rear Delt Reverse Fly (Machine); leg extension 1× i leg curl 2× w tygodniu; brzuch: Knee Raise Parallel Bars | Barki boczne i tył barków bez osobnej pracy, za mało ciągnięcia, ramiona mają zostać na każdym treningu, limit 10 ćwiczeń |
+| 2026-10-12 | Chest Press (Machine) | maszyna | Korekta wpisu z 2026-09-29: okres 29.09–8.10 liczyć jako talerze, nie jako niepewny | Decyzja Jakuba: w tym okresie praktycznie zawsze talerze; jedna linia zamiast osobnej serii niepewnej |
 </script>
 <script>
 "use strict";
@@ -1001,9 +1002,18 @@ for (const d of DECISIONS.filter(d => d.type === "maszyna")) {
     PERIODS.push({ ex: d.ex, from: new Date(0), to, uncertain: false, name: `${base} (${what}, do ${dm(shiftDay(to, -1))})` });
   }
 }
+// Korekta okresu niepewnego: późniejszy wpis „maszyna” dla tego ćwiczenia „Korekta wpisu z RRRR-MM-DD: … liczyć jako <słowo>”
+// zamienia okres niepewny zaczynający się tego dnia w okres przypisanej maszyny „<ćwiczenie> (<słowo>)” (np. Chest Press (talerze)):
+// treningi z okresu wchodzą do serii tej maszyny (wykres, sygnały, zastoje, kontrola przypisania domyślnego).
+for (const d of DECISIONS.filter(d => d.type === "maszyna")) {
+  const m = d.change.match(/korekta\s+wpisu\s+z\s+(\d{4}-\d{2}-\d{2}).*?liczyć\s+jako\s+([\p{L}\d]+)/iu);
+  if (!m) continue;
+  for (const p of PERIODS.filter(p => p.ex === d.ex && p.uncertain && +p.from === +isoDay(m[1])))
+    Object.assign(p, { uncertain: false, assigned: true, name: `${baseName(d.ex)} (${m[2].toLowerCase()})` });
+}
 const periodOf = (name, date) => PERIODS.find(p => p.ex === name && date >= p.from && date < p.to);
-// Maszyna, której okres zamknął wpis „maszyna” (np. multi press do 28.09): tylko historia na wykresach.
-const isClosed = name => PERIODS.some(p => !p.uncertain && p.name === name);
+// Maszyna, której okres zamknął wpis „maszyna” (np. multi press do 28.09): tylko historia (rekordy).
+const isClosed = name => PERIODS.some(p => !p.uncertain && !p.assigned && p.name === name);
 // Nazwa maszyny dla wpisu z podziałem według notatki; null = ćwiczenie bez podziału w tym dniu.
 function splitOf(name, date, note) {
   const s = SPLITS.filter(x => x.ex === name && date >= x.from).pop();
@@ -1431,7 +1441,8 @@ function renderKPIs() {
     (left >= 0 ? ` (za ${left} ${plDni(left)})` : " (termin minął; czas na ocenę)") + " · szczegóły: zalozenia_treningowe.md, sekcja 11";
   $("#merged").textContent = "Z decyzje.md: " + [
     ...ALIASES.map(a => `${a.ex} ${a.until ? `od ${dm(a.from)} do ${dm(shiftDay(a.until, -1))} ` : ""}liczę jako ${a.to}`),
-    ...PERIODS.map(p => `${p.ex} ${p.uncertain ? `od ${dm(p.from)} do ${dm(shiftDay(p.to, -1))} to okres niepewny` : `przed ${dm(p.to)} to osobna maszyna`} („${p.name}”)`),
+    ...PERIODS.map(p => p.assigned ? `${p.ex} od ${dm(p.from)} do ${dm(shiftDay(p.to, -1))} liczę jako ${p.name} (korekta okresu niepewnego)`
+      : `${p.ex} ${p.uncertain ? `od ${dm(p.from)} do ${dm(shiftDay(p.to, -1))} to okres niepewny` : `przed ${dm(p.to)} to osobna maszyna`} („${p.name}”)`),
     ...SPLITS.map(s => `${s.ex} od ${dm(s.from)}: maszyna wg słowa w notatce ćwiczenia (${s.words.map(w => `„${w}”`).join(" / ")}; brak słowa = ${s.words[0]}, oba = niepewne)`),
   ].join(". ") + ".";
   const CAT_LABEL ={ zlozone_maszyna: "złożone (maszyna)", izolacja: "izolacja", brzuch: "brzuch", zlozone_wolne: "złożone (wolne)" };
@@ -1856,18 +1867,33 @@ const METRIC = {
     val: x => x.rpe == null ? null : Math.round(x.rpe * 10) / 10, unit: "", fmt: v => nf(v, 1), yFixed: [6, 10] },
 };
 
+// Karty progresu pokazują tylko aktywne linie: bez treningów z dni-wyjątków (wpis „wyjatek” dla *), bez maszyn z zamkniętym
+// okresem (wpis „maszyna … przed …”) i bez maszyn nieużywanych od ponad CFG.signalsActiveDays dni (licząc od najnowszego
+// treningu, jak w sygnałach). Pominięte zostają w rekordach. Zwraca powód pominięcia albo null.
+const cardPts = list => list.filter(p => !isExcluded(p.date));
+function offCards(e, pts) {
+  if (isClosed(e.name)) return "zamknięty okres";
+  if (!pts.length) return "tylko dni wyjątków";
+  const latest = MODEL.workouts[MODEL.workouts.length - 1].start;
+  return dayDiff(pts[pts.length - 1].date, latest) > CFG.signalsActiveDays ? `nieużywane od ponad ${CFG.signalsActiveDays} dni` : null;
+}
+
 function moveFamilies() {
-  const map = new Map();
+  const map = new Map(), hidden = [];
   for (const e of MODEL.exercises) {
     if (e.kind !== "weight") continue;
+    e.cardProgress = cardPts(e.progress);
+    const why = offCards(e, e.cardProgress);
+    if (why) { hidden.push({ name: e.name, why }); continue; }
     const f = familyOf(e.name);
     if (!map.has(f)) map.set(f, []);
     map.get(f).push(e);
   }
-  return [...map].map(([name, list]) => ({
-    name, list: list.sort((a, b) => b.progress.length - a.progress.length || a.name.localeCompare(b.name)),
-    sessions: sum(list, e => e.progress.length),
+  const fams = [...map].map(([name, list]) => ({
+    name, list: list.sort((a, b) => b.cardProgress.length - a.cardProgress.length || a.name.localeCompare(b.name)),
+    sessions: sum(list, e => e.cardProgress.length),
   })).sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
+  return { fams, hidden };
 }
 
 const MARK_TYPES = new Set(["ciezar", "kolejnosc", "zasada", "kategoria", "maszyna"]);   // wpisy dla ćwiczeń
@@ -1883,7 +1909,7 @@ const markersFor = fam => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.ha
 function repsCard(host, e, M) {
   const rpeMode = progressMode === "rpe";
   const val = p => rpeMode ? (p.rpe == null ? null : Math.round(p.rpe * 10) / 10) : p.sum;
-  const pts = e.repsProgress.filter(p => val(p) != null);
+  const pts = e.cardProgress.filter(p => val(p) != null);
   const unit = rpeMode ? "" : "powt.", fmt = rpeMode ? v => nf(v, 1) : v => nf(v);
   const card = document.createElement("div");
   card.className = "mini";
@@ -1895,9 +1921,9 @@ function repsCard(host, e, M) {
     const txt = rpeMode ? (better ? " łatwiej" : worse ? " trudniej" : "") : "";
     const delta = pts.length < 2 ? "" : better || worse ? `<span${better ? ' class="delta-up"' : ""}>${d > 0 ? "▲" : "▼"} ${esc(fmt(Math.abs(d)))}${unit ? " " + unit : ""}${txt}</span>`
       : `<span>${rpeMode ? "stabilnie" : "bez zmian"}</span>`;
-    meta = `<div class="meta"><span>${pts.length} ${plTrening(pts.length)} · ${esc(range)} · masa ciała</span>${delta}</div>`;
+    meta = `<div class="meta"><span>${esc(e.name)} · ${pts.length} ${plTrening(pts.length)} · ${esc(range)} · masa ciała</span>${delta}</div>`;
   }
-  card.innerHTML = `<h3>${esc(e.name)}</h3>${meta}<div class="chart"></div>`;
+  card.innerHTML = `<h3>${esc(FAMILIES.some(([, re]) => re.test(e.name)) ? familyOf(e.name) : e.name)}</h3>${meta}<div class="chart"></div>`;
   host.appendChild(card);
   if (!pts.length) return;
   const series = [{ e, name: e.name, color: css(SERIES_VARS[0]), shape: SHAPES[0], dashed: false,
@@ -1914,16 +1940,21 @@ function renderProgress() {
     " Ćwiczenia z masą ciała mają osobną kartę: suma powtórzeń z serii roboczych na trening (w trybie RPE średnie RPE).";
   const host = $("#multiples");
   host.innerHTML = "";
-  const fams = moveFamilies();
+  const { fams, hidden } = moveFamilies();
   // Ćwiczenia z masą ciała mają osobne karty (suma powtórzeń zamiast kilogramów, więc nie na wspólnej osi z maszyną).
-  const repsEx = MODEL.exercises.filter(e => e.kind === "reps" && e.repsProgress && e.repsProgress.length >= 2);
-  const cards = [...fams.filter(f => f.sessions >= 2).map(f => ({ f, n: f.sessions })), ...repsEx.map(e => ({ e, n: e.repsProgress.length }))]
+  const repsEx = MODEL.exercises.filter(e => e.kind === "reps" && e.repsProgress).filter(e => {
+    e.cardProgress = cardPts(e.repsProgress);
+    const why = offCards(e, e.cardProgress);
+    if (why) hidden.push({ name: e.name, why });
+    return !why && e.cardProgress.length >= 2;
+  });
+  const cards = [...fams.filter(f => f.sessions >= 2).map(f => ({ f, n: f.sessions })), ...repsEx.map(e => ({ e, n: e.cardProgress.length }))]
     .sort((a, b) => b.n - a.n);
   for (const { f, e } of cards) {
     if (e) { repsCard(host, e, M); continue; }
     const series = f.list.slice(0, SERIES_VARS.length).map((e, i) => ({
       e, name: e.name, color: css(SERIES_VARS[i]), shape: SHAPES[i], dashed: e.uncertain,
-      points: e.progress.filter(x => M.val(x) != null).map(x => ({
+      points: e.cardProgress.filter(x => M.val(x) != null).map(x => ({
         d: x.date, v: M.val(x), note: x.note, title: x.workout.title, solo: x.solo,
         rows: tipRow("Najcięższa seria", `${nf(x.kg, 1)} kg × ${nf(x.reps)}`) +
           tipRow("Szac. 1RM", kg(Math.round(x.e1rm * 10) / 10)) +
@@ -1933,7 +1964,8 @@ function renderProgress() {
     })).filter(s => s.points.length);
     const card = document.createElement("div");
     card.className = "mini";
-    const single = f.list.length === 1;
+    // Tytuł karty = nazwa ruchu z FAMILIES (maszyny w legendzie); ruch spoza FAMILIES z jedną maszyną: tytuł = nazwa maszyny.
+    const single = f.list.length === 1 && !FAMILIES.some(([n]) => n === f.name);
     const line = s => {
       const p = s.points, a = p[0].v, b = p[p.length - 1].v, d = b - a;
       const range = p.length > 1 ? `${M.fmt(a)} → ${M.fmt(b)}${M.unit ? " " + M.unit : ""}` : `${M.fmt(a)}${M.unit ? " " + M.unit : ""}`;
@@ -1960,7 +1992,12 @@ function renderProgress() {
     if (series.length) lineChart($(".chart", card), { series, markers: markersFor(f.name), unit: M.unit, fmt: M.fmt, yFixed: M.yFixed || null });
   }
   const once = fams.filter(f => f.sessions < 2).flatMap(f => f.list.map(e => e.name));
-  $("#only-once").textContent = once.length ? `Ruchy zrobione tylko raz, więc bez wykresu (są w tabeli rekordów): ${once.join(", ")}.` : "";
+  const groups = new Map();
+  for (const h of hidden) { if (!groups.has(h.why)) groups.set(h.why, []); groups.get(h.why).push(h.name); }
+  $("#only-once").textContent = [
+    once.length ? `Ruchy zrobione tylko raz, więc bez wykresu (są w tabeli rekordów): ${once.join(", ")}.` : "",
+    hidden.length ? `Poza kartami (są w tabeli rekordów): ${[...groups].map(([why, names]) => `${why}: ${names.join(", ")}`).join("; ")}.` : "",
+  ].filter(Boolean).join(" ");
 }
 
 // ---------- Grupy mięśniowe ----------
