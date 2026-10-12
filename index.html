@@ -1,0 +1,1937 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Dashboard treningowy</title>
+<style>
+:root {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #e66767;
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--page);
+  color: var(--text-primary);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 24px; }
+h1 { font-size: 26px; line-height: 1.2; margin: 0 0 4px; font-weight: 650; letter-spacing: -0.01em; }
+h2 { font-size: 17px; margin: 0; font-weight: 600; }
+.sub { color: var(--text-secondary); margin: 0; }
+.muted { color: var(--text-muted); }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 14px; font: inherit;
+}
+.btn:hover { border-color: rgba(255,255,255,0.25); }
+.btn input { display: none; }
+#error { color: var(--critical); margin: 0 0 16px; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.kpi .label { color: var(--text-secondary); font-size: 13px; }
+.kpi .value { font-size: 26px; font-weight: 650; line-height: 1.25; margin-top: 2px; }
+.kpi .note { color: var(--text-muted); font-size: 12px; }
+
+section.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 14px; margin-bottom: 16px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+.card-head p { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; }
+.row2 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+.row2 > section { margin-bottom: 0; }
+.row2 + * { margin-top: 16px; }
+.row2.even { grid-template-columns: 1fr 1fr; }
+.row2 + .card { margin-top: 16px; }
+@media (max-width: 860px) { .row2, .row2.even { grid-template-columns: 1fr; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text-secondary); font-size: 13px; align-items: center; }
+.legend .sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.legend .ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--text-secondary); vertical-align: middle; margin-right: 6px; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; cursor: pointer; user-select: none; }
+.toggle input { accent-color: var(--series-2); }
+
+.multiples { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
+.mini { background: var(--surface-2); border-radius: 10px; padding: 12px 12px 6px; min-width: 0; }
+.mini h3 { font-size: 14px; font-weight: 600; margin: 0; }
+.mini .meta { display: flex; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 12px; margin: 2px 0 4px; }
+.delta-up { color: var(--good); font-weight: 600; }
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { font-family: inherit; font-variant-numeric: tabular-nums; }
+.only-once { margin-top: 12px; color: var(--text-muted); font-size: 13px; }
+
+.table-wrap { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 760px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { color: var(--text-secondary); font-weight: 600; font-size: 13px; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--surface); }
+th:hover { color: var(--text-primary); }
+th .arrow { color: var(--text-muted); margin-left: 4px; font-size: 11px; }
+td.num, th.num { text-align: right; }
+tbody tr:hover td { background: var(--surface-2); }
+.tag { display: inline-block; font-size: 11px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; margin-left: 6px; }
+.dim { color: var(--text-muted); }
+
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.seg button { background: none; border: 0; color: var(--text-secondary); font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 6px; cursor: pointer; }
+.seg button.on { background: #383835; color: var(--text-primary); }
+
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.st-up { color: var(--good); }
+.st-hold { color: var(--warning); }
+.st-stall { color: var(--serious); }
+.st-old { color: var(--text-muted); }
+.st-down { color: var(--serious); }
+.ok { color: var(--good); }
+.bad { color: var(--serious); }
+.na { color: var(--text-muted); }
+table.plan td, table.order td { white-space: normal; vertical-align: top; }
+table.plan td.nw, table.order td.nw { white-space: nowrap; }
+table.plan .why { color: var(--text-muted); font-size: 12px; }
+table.plan td:nth-child(2) { min-width: 200px; }
+table.plan td:nth-child(3) { min-width: 190px; font-size: 13px; }
+table.plan td:nth-child(5) { min-width: 200px; }
+table.plan td:nth-child(6) { min-width: 220px; }
+table.order td { font-size: 13px; }
+table.order th, table.plan th { cursor: default; }
+.hb-track { position: relative; display: block; height: 14px; }
+.hb-band { position: absolute; top: 0; bottom: 0; background: rgba(255,255,255,0.06); border-radius: 2px; }
+.hb-base { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 1.5px dashed var(--text-muted); }
+.hbar .hb-fill { position: relative; top: 2px; }
+.hb-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-muted); margin-top: 8px; align-items: center; }
+.hb-legend i { display: inline-block; vertical-align: middle; margin-right: 5px; }
+.next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.nc { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.nc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.nc h3 { font-size: 14px; margin: 0; font-weight: 600; }
+.nc .target { margin-top: 8px; font-size: 15px; }
+.nc .target b { font-weight: 650; }
+.nc .last, .nc .why { color: var(--text-muted); font-size: 12px; margin-top: 3px; }
+.nc .last { color: var(--text-secondary); }
+
+.plateau { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 4px 24px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
+.plateau:last-of-type { border-bottom: 0; }
+.plateau .name { font-weight: 600; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.plateau .det, .plateau .adv { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
+.plateau table { min-width: 0; width: auto; margin-top: 8px; font-size: 12px; }
+.plateau th, .plateau td { padding: 4px 14px 4px 0; position: static; cursor: default; font-size: 12px; }
+.plateau ul { margin: 6px 0 0; padding-left: 18px; }
+.plateau li { margin-bottom: 4px; }
+@media (max-width: 700px) { .plateau { grid-template-columns: 1fr; } }
+
+.warn, .info { display: flex; gap: 10px; align-items: flex-start; border-radius: 8px; padding: 9px 12px; margin-bottom: 8px; font-size: 13px; }
+.warn { background: rgba(250,178,25,0.07); border: 1px solid rgba(250,178,25,0.35); }
+.warn .ic { color: var(--warning); font-weight: 700; }
+.info { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
+.info .ic { color: var(--text-muted); font-weight: 700; }
+.muscle-row { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 1.6fr); gap: 24px; margin-top: 14px; }
+@media (max-width: 860px) { .muscle-row { grid-template-columns: 1fr; } }
+h4 { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
+.hbar { display: grid; grid-template-columns: 120px 1fr 40px; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; }
+.hb-fill { display: block; height: 10px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 2px; }
+.hb-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+table.heat { min-width: 0; width: auto; }
+table.heat th { cursor: default; position: static; font-weight: 500; font-size: 12px; color: var(--text-muted); text-align: center; padding: 4px; }
+table.heat th.rl, table.heat td.rl { text-align: left; color: var(--text-secondary); font-size: 13px; padding: 4px 10px 4px 0; border-bottom: 0; }
+table.heat td.hc { width: 46px; height: 30px; text-align: center; padding: 0; border: 2px solid var(--surface); border-radius: 6px; font-size: 12px; font-weight: 600; }
+table.heat td.tot { text-align: right; color: var(--text-secondary); border-bottom: 0; padding-left: 12px; }
+table.heat tbody tr:hover td { background: inherit; }
+details { margin-top: 14px; }
+details summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
+.map-list { columns: 2 260px; font-size: 13px; color: var(--text-secondary); margin-top: 8px; }
+.map-list div { break-inside: avoid; padding: 1px 0; }
+
+.cal-row { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.cal { display: grid; gap: 3px; font-size: 11px; color: var(--text-muted); }
+.cal .ml { white-space: nowrap; overflow: visible; }
+.cal .dl { line-height: 24px; padding-right: 4px; }
+.cal .cd { width: 24px; height: 24px; border-radius: 4px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.cal .cd.w { font-weight: 700; cursor: default; }
+.cal .cd.future { background: transparent; border: 1px dashed var(--grid); color: transparent; }
+.cal-legend { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+.cal-legend i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.cal-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px 24px; flex: 1; min-width: min(100%, 300px); }
+.stat .label { color: var(--text-secondary); font-size: 12px; }
+.stat .value { font-size: 18px; font-weight: 650; line-height: 1.3; }
+.stat .note { color: var(--text-muted); font-size: 12px; }
+
+footer { color: var(--text-muted); font-size: 12px; margin-top: 20px; }
+
+#tip {
+  position: fixed; z-index: 10; pointer-events: none; max-width: 300px;
+  background: #2a2a28; color: var(--text-primary); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.45;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+}
+#tip .t { font-weight: 600; margin-bottom: 2px; }
+#tip .r { display: flex; justify-content: space-between; gap: 16px; color: var(--text-secondary); }
+#tip .r b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+#tip .sw { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+#tip .n { margin-top: 6px; color: var(--text-secondary); font-style: italic; white-space: normal; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Dashboard treningowy</h1>
+      <p class="sub" id="range"></p>
+      <p class="sub muted" id="phase" style="font-size:13px"></p>
+      <p class="sub muted" id="targets" style="font-size:13px"></p>
+    </div>
+    <label class="btn" title="Wybierz nowszy eksport z Hevy (CSV)">
+      Wczytaj nowy eksport CSV
+      <input type="file" id="file" accept=".csv,text/csv">
+    </label>
+  </header>
+  <p id="error" hidden></p>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Sygnały z danych</h2>
+        <p>Sygnały są materiałem do decyzji, nie planem. Plan treningu powstaje poza dashboardem; świadome decyzje zapisuj w decyzje.md.</p>
+      </div>
+      <div class="legend">
+        <span class="badge st-up">▲ Czysto ×2 / cel przekroczony</span>
+        <span class="badge st-hold">● Czysto ×1 / na cel bez zapasu</span>
+        <span class="badge st-down">▼ Poniżej celu</span>
+        <span class="badge st-stall">■ Zastój</span>
+        <span class="badge st-old">↓ Świadome zejście</span>
+        <span class="badge st-old">◆ Decyzja podjęta</span>
+        <span class="badge st-old">↗ Podbijanie w trakcie</span>
+        <span class="badge st-down">↘ Zejście w trakcie</span>
+      </div>
+    </div>
+    <div id="signals-warn"></div>
+    <div class="table-wrap"><table id="plan"></table></div>
+    <p class="only-once" id="signals-rules"></p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Kontrola kolejności i zasad</h2>
+        <p>Leg press pierwszy, shoulder press pierwszy w bloku góry, złożone przed izolacją, brzuch na końcu, nic nie pominięte, rozgrzewki, bez upadku w złożonych</p>
+      </div>
+    </div>
+    <div class="table-wrap"><table id="order"></table></div>
+    <p class="only-once">Plan ustalał się stopniowo, więc starsze treningi mogą nie spełniać części zasad.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Zastoje i zaległe podniesienia</h2>
+        <p>Zastój = 3 treningi z rzędu na tym samym ciężarze bez czystego 3 × cel. Najpierw szukamy przyczyny, potem zmieniamy ciężar lub objętość.</p>
+      </div>
+    </div>
+    <div id="plateaus"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Progres</h2>
+        <p id="progress-sub"></p>
+      </div>
+      <div class="legend">
+        <div class="seg" role="group" aria-label="Co pokazać na wykresach">
+          <button type="button" data-mode="kg" class="on">Ciężar</button>
+          <button type="button" data-mode="e1rm">Szac. 1RM</button>
+          <button type="button" data-mode="rpe">RPE</button>
+        </div>
+        <span><span class="ring"></span>trening z notatką</span>
+      </div>
+    </div>
+    <div class="multiples" id="multiples"></div>
+    <p class="only-once" id="only-once"></p>
+  </section>
+
+  <div class="row2">
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>Treningi w tygodniu</h2>
+          <p>Tygodnie od poniedziałku do niedzieli</p>
+        </div>
+      </div>
+      <div class="chart" id="weekly"></div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>Objętość na trening</h2>
+          <p>Suma ciężar × powtórzenia, bez serii rozgrzewkowych</p>
+        </div>
+      </div>
+      <div class="chart" id="volume"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Serie na grupę mięśniową</h2>
+        <p>Serie robocze przypisane do głównej partii mięśniowej ćwiczenia (bez rozgrzewek i cardio)</p>
+      </div>
+    </div>
+    <div id="muscle-warn"></div>
+    <div class="muscle-row">
+      <div><h4>Średnio serii na tydzień</h4><div id="muscle-avg"></div></div>
+      <div><h4>Serie w poszczególnych tygodniach</h4><div class="table-wrap"><table class="heat" id="muscle-heat"></table></div></div>
+    </div>
+    <details><summary>Jak przypisałem ćwiczenia do grup</summary><div class="map-list" id="muscle-map"></div></details>
+  </section>
+
+  <div class="row2 even">
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>Czas trwania treningu</h2>
+          <p>Minuty od rozpoczęcia do zakończenia</p>
+        </div>
+      </div>
+      <div class="chart" id="duration"></div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>Gęstość treningu</h2>
+          <p>Objętość na minutę (kg/min); wyżej = krótsze przerwy albo cięższa praca</p>
+        </div>
+      </div>
+      <div class="chart" id="density"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Kalendarz aktywności</h2>
+        <p>Kolor dnia = objętość treningu. Najedź na dzień, żeby zobaczyć szczegóły.</p>
+      </div>
+    </div>
+    <div class="cal-row">
+      <div><div class="cal" id="calendar"></div><div class="cal-legend" id="cal-legend"></div></div>
+      <div class="cal-stats" id="cal-stats"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Rekordy</h2>
+        <p>Kliknij nagłówek kolumny, żeby posortować</p>
+      </div>
+    </div>
+    <div class="table-wrap"><table id="records"></table></div>
+  </section>
+
+  <footer>
+    Szacowany 1RM liczony wzorem Epleya: ciężar × (1 + powtórzenia / 30). Serie rozgrzewkowe nie są wliczane do rekordów ani objętości.
+    Ćwiczenia bez obciążenia (np. z masą ciała) i cardio nie wchodzą do objętości.
+    Progi i zasady pochodzą z pliku zalozenia_treningowe.md (obiekty CFG, PLAN i FAMILIES na początku skryptu) i są wskazówką, nie sztywnym limitem.
+    <span id="merged"></span>
+  </footer>
+</div>
+<div id="tip" hidden></div>
+
+<script type="text/csv" id="csv-data">
+"title","start_time","end_time","description","exercise_title","superset_id","exercise_notes","set_index","set_type","weight_kg","reps","distance_km","duration_seconds","rpe"
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Cycling",,"",0,"warmup",,,3,360,
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Shoulder Press (Machine)",,"Zrobilem na 10 powtórzeń w rozgrzewce bo sie zapomniałem.",0,"warmup",11,10,,,6
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Shoulder Press (Machine)",,"Zrobilem na 10 powtórzeń w rozgrzewce bo sie zapomniałem.",1,"normal",22.5,10,,,7.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Shoulder Press (Machine)",,"Zrobilem na 10 powtórzeń w rozgrzewce bo sie zapomniałem.",2,"normal",22.5,10,,,7.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Shoulder Press (Machine)",,"Zrobilem na 10 powtórzeń w rozgrzewce bo sie zapomniałem.",3,"normal",22.5,10,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Chest Press (Machine)",,"Doliczone. Talerze",0,"warmup",15,12,,,6
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Chest Press (Machine)",,"Doliczone. Talerze",1,"normal",32.5,10,,,8.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Chest Press (Machine)",,"Doliczone. Talerze",2,"normal",32.5,10,,,8.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Chest Press (Machine)",,"Doliczone. Talerze",3,"normal",32.5,10,,,9
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Row (Machine)",,"",0,"normal",46,10,,,7.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Row (Machine)",,"",1,"normal",46,10,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Row (Machine)",,"",2,"normal",46,10,,,8.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Lat Pulldown (Machine)",,"",0,"normal",52.3,10,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Lat Pulldown (Machine)",,"",1,"normal",52.3,10,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Lat Pulldown (Machine)",,"",2,"normal",52.3,10,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Preacher Curl (Machine)",,"Teraz mam ustawione na maszynie 16kg i u gory przestawione na pierwszym ktory ma 7kg ale nie wiem kompletnie kle finalnie podnoszę. Na tych maszynach poerwszy na stosie zazwyczaj ma 2,5kg około.",0,"normal",18,12,,,7
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Preacher Curl (Machine)",,"Teraz mam ustawione na maszynie 16kg i u gory przestawione na pierwszym ktory ma 7kg ale nie wiem kompletnie kle finalnie podnoszę. Na tych maszynach poerwszy na stosie zazwyczaj ma 2,5kg około.",1,"normal",18,12,,,7.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Preacher Curl (Machine)",,"Teraz mam ustawione na maszynie 16kg i u gory przestawione na pierwszym ktory ma 7kg ale nie wiem kompletnie kle finalnie podnoszę. Na tych maszynach poerwszy na stosie zazwyczaj ma 2,5kg około.",2,"normal",18,12,,,8.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Triceps Press",,"",0,"normal",52.3,12,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Triceps Press",,"",1,"normal",52.3,12,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Triceps Press",,"",2,"normal",52.3,13,,,9
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Leg Press (Machine)",,"Dzisiaj dół na koniec, bo maszyny były zajęte.",0,"warmup",40,15,,,6
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Leg Press (Machine)",,"Dzisiaj dół na koniec, bo maszyny były zajęte.",1,"normal",85,10,,,8.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Leg Press (Machine)",,"Dzisiaj dół na koniec, bo maszyny były zajęte.",2,"normal",85,10,,,8.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Leg Press (Machine)",,"Dzisiaj dół na koniec, bo maszyny były zajęte.",3,"normal",85,10,,,9
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Leg Curl (Machine)",,"",0,"normal",55,12,,,7.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Leg Curl (Machine)",,"",1,"normal",55,12,,,8.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Seated Leg Curl (Machine)",,"",2,"normal",55,12,,,9.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Leg Extension (Machine)",,"Znowu, kazda kolejna łatwiej",0,"normal",42.5,12,,,8.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Leg Extension (Machine)",,"Znowu, kazda kolejna łatwiej",1,"normal",42.5,12,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Leg Extension (Machine)",,"Znowu, kazda kolejna łatwiej",2,"normal",42.5,12,,,8
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Knee Raise Parallel Bars",,"",0,"normal",,20,,,9.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Knee Raise Parallel Bars",,"",1,"normal",,14,,,9.5
+"FBW_Plecy+","Oct 11, 2026, 6:21 PM","Oct 11, 2026, 7:47 PM","","Knee Raise Parallel Bars",,"",2,"normal",,9,,,9.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Cycling",,"",0,"warmup",,,3,360,
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Leg Press (Machine)",,"",0,"warmup",40,15,,,6
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Leg Press (Machine)",,"",1,"normal",80,12,,,7.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Leg Press (Machine)",,"",2,"normal",80,12,,,8.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Leg Press (Machine)",,"",3,"normal",80,12,,,9
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Leg Curl (Machine)",,"",0,"normal",55,12,,,8.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Leg Curl (Machine)",,"",1,"normal",55,12,,,9
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Leg Curl (Machine)",,"",2,"normal",55,12,,,
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Leg Extension (Machine)",,"Druga seria szla lepiej niz pierwsza. W poerwszej byla wieksza walka, co lepsze 3 weszla jeszcze lepiej.",0,"normal",42.5,12,,,9
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Leg Extension (Machine)",,"Druga seria szla lepiej niz pierwsza. W poerwszej byla wieksza walka, co lepsze 3 weszla jeszcze lepiej.",1,"normal",42.5,12,,,8.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Leg Extension (Machine)",,"Druga seria szla lepiej niz pierwsza. W poerwszej byla wieksza walka, co lepsze 3 weszla jeszcze lepiej.",2,"normal",42.5,12,,,8
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Shoulder Press (Machine)",,"",0,"warmup",10,12,,,6
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",20,12,,,7.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",20,12,,,8.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Shoulder Press (Machine)",,"",3,"normal",20,12,,,9
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Chest Press (Machine)",,"",0,"warmup",15,12,,,6
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Chest Press (Machine)",,"",1,"normal",30,12,,,7.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Chest Press (Machine)",,"",2,"normal",30,12,,,8.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Chest Press (Machine)",,"",3,"normal",30,12,,,9.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Row (Machine)",,"",0,"normal",43.3,12,,,8
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Row (Machine)",,"",1,"normal",43.3,12,,,8.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Row (Machine)",,"",2,"normal",43.3,12,,,9.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Preacher Curl (Machine)",,"Mocno jestem juz wpompowany dzisiaj, bic nie wchodzi wiec robie do 10 i ostatnie juz na styk",0,"normal",20,10,,,9.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Preacher Curl (Machine)",,"Mocno jestem juz wpompowany dzisiaj, bic nie wchodzi wiec robie do 10 i ostatnie juz na styk",1,"normal",20,10,,,9.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Preacher Curl (Machine)",,"Mocno jestem juz wpompowany dzisiaj, bic nie wchodzi wiec robie do 10 i ostatnie juz na styk",2,"normal",20,10,,,9.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Chest Fly (Machine)",,"",0,"normal",35,12,,,7.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Chest Fly (Machine)",,"",1,"normal",35,12,,,9
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Chest Fly (Machine)",,"",2,"normal",35,10,,,10
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Triceps Press",,"",0,"normal",52.3,12,,,8.5
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Triceps Press",,"",1,"normal",52.3,12,,,9
+"FBW_Klata+","Oct 8, 2026, 7:33 PM","Oct 8, 2026, 9:02 PM","","Seated Triceps Press",,"",2,"normal",52.3,12,,,10
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Cycling",,"",0,"warmup",,,3,360,
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Leg Curl (Machine)",,"",0,"normal",50,12,,,7
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Leg Curl (Machine)",,"",1,"normal",50,12,,,8.5
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Leg Curl (Machine)",,"",2,"normal",50,12,,,9
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Leg Extension (Machine)",,"",0,"normal",40,12,,,8.5
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Leg Extension (Machine)",,"",1,"normal",40,12,,,8.5
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Leg Extension (Machine)",,"",2,"normal",40,12,,,9
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Shoulder Press (Machine)",,"",0,"warmup",10,12,,,6
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",20,10,,,8
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",20,10,,,
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Chest Press (Machine)",,"",0,"warmup",15,12,,,6
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Chest Press (Machine)",,"",1,"normal",30,10,,,8.5
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Chest Press (Machine)",,"",2,"normal",30,10,,,9.5
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Row (Machine)",,"",0,"normal",41,12,,,8
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Row (Machine)",,"",1,"normal",41,12,,,9
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Lat Pulldown (Machine)",,"",0,"normal",46,12,,,8
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Lat Pulldown (Machine)",,"",1,"normal",50,12,,,8.5
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Preacher Curl (Machine)",,"",0,"normal",20,10,,,8
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Preacher Curl (Machine)",,"",1,"normal",20,10,,,9
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Triceps Press",,"",0,"normal",50,12,,,8
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Seated Triceps Press",,"",1,"normal",50,12,,,8.5
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Crunch (Machine)",,"",0,"normal",20,10,,,9
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Crunch (Machine)",,"",1,"normal",17.5,10,,,9
+"Wieczorny trening 🏋️","Oct 6, 2026, 6:06 PM","Oct 6, 2026, 7:09 PM","","Treadmill",,"6km/h",0,"normal",,,,480,
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Chest Press (Machine)",,"",0,"normal",30,12,,,7.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Chest Press (Machine)",,"",1,"normal",30,12,,,8.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Chest Press (Machine)",,"",2,"normal",30,8,,,9
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Shoulder Press (Machine)",,"",0,"normal",20,10,,,8
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",20,10,,,9
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",20,10,,,9
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Row (Machine)",,"",0,"normal",41,12,,,7.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Row (Machine)",,"",1,"normal",41,12,,,8.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Row (Machine)",,"",2,"normal",41,12,,,9.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Lat Pulldown (Machine)",,"",0,"normal",41,12,,,7.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Lat Pulldown (Machine)",,"",1,"normal",46,12,,,8.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Lat Pulldown (Machine)",,"",2,"normal",46,12,,,9
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Chest Fly (Machine)",,"",0,"normal",35,15,,,8.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Chest Fly (Machine)",,"",1,"normal",35,15,,,9.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Chest Fly (Machine)",,"",2,"normal",35,10,,,10
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Preacher Curl (Machine)",,"",0,"normal",20,12,,,8.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Preacher Curl (Machine)",,"",1,"normal",20,12,,,9
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Preacher Curl (Machine)",,"",2,"normal",20,9,,,10
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Triceps Press",,"",0,"normal",50,15,,,9.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Triceps Press",,"",1,"normal",50,15,,,9.5
+"Popołudniowy trening 💪","Oct 4, 2026, 5:47 PM","Oct 4, 2026, 6:42 PM","","Seated Triceps Press",,"",2,"normal",50,15,,,9.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Cycling",,"",0,"warmup",,,3,360,
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Shoulder Press (Machine)",,"",0,"warmup",10,10,,,6
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",20,12,,,8.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",20,12,,,8.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Shoulder Press (Machine)",,"",3,"normal",20,12,,,9.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Row (Machine)",,"",0,"normal",41,12,,,7.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Row (Machine)",,"",1,"normal",41,12,,,9
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Row (Machine)",,"",2,"normal",41,12,,,9
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Chest Press (Machine)",,"",0,"normal",29,12,,,8.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Chest Press (Machine)",,"",1,"normal",30,12,,,9.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Chest Press (Machine)",,"",2,"normal",30,8,,,10
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Preacher Curl (Machine)",,"",0,"normal",20,12,,,8
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Preacher Curl (Machine)",,"",1,"normal",20,12,,,8.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Preacher Curl (Machine)",,"",2,"normal",20,10,,,9
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Leg Curl (Machine)",,"",0,"normal",50,12,,,8
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Leg Curl (Machine)",,"",1,"normal",50,12,,,9.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Leg Curl (Machine)",,"",2,"normal",50,12,,,9
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Chest Fly (Machine)",,"",0,"normal",35,12,,,7.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Chest Fly (Machine)",,"",1,"normal",37.5,10,,,9
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Chest Fly (Machine)",,"",2,"normal",37.5,10,,,9.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Triceps Press",,"",0,"normal",48,12,,,8.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Triceps Press",,"",1,"normal",48,12,,,9
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Seated Triceps Press",,"",2,"normal",48,15,,,9.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Leg Press (Machine)",,"",0,"normal",75,12,,,8.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Leg Press (Machine)",,"",1,"normal",75,10,,,8.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Leg Press (Machine)",,"",2,"normal",75,8,,,8.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Knee Raise Parallel Bars",,"",0,"normal",,18,,,9.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Knee Raise Parallel Bars",,"",1,"normal",,12,,,9.5
+"FBW","Oct 1, 2026, 7:31 PM","Oct 1, 2026, 8:57 PM","","Knee Raise Parallel Bars",,"",2,"normal",,8,,,9.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Elliptical Trainer",,"",0,"normal",,,,300,
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Shoulder Press (Machine)",,"",0,"normal",16,12,,,8
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",16,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",16,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Chest Press (Machine)",,"Poerwszy raz na maszynie gdzie sie zaklada ciezar a nie ustawia obciazenia, innh ruch bardziej poziomy od klatki.",0,"normal",25,12,,,7
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Chest Press (Machine)",,"Poerwszy raz na maszynie gdzie sie zaklada ciezar a nie ustawia obciazenia, innh ruch bardziej poziomy od klatki.",1,"normal",30,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Chest Press (Machine)",,"Poerwszy raz na maszynie gdzie sie zaklada ciezar a nie ustawia obciazenia, innh ruch bardziej poziomy od klatki.",2,"failure",30,8,,,9.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Leg Extension (Machine)",,"",0,"normal",40,12,,,8
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Leg Extension (Machine)",,"",1,"normal",40,12,,,8
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Leg Extension (Machine)",,"",2,"normal",40,12,,,9
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Triceps Press",,"",0,"normal",46,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Triceps Press",,"",1,"normal",46,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Triceps Press",,"",2,"normal",46,12,,,9
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Leg Curl (Machine)",,"",0,"normal",50,12,,,8
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Leg Curl (Machine)",,"",1,"normal",50,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Leg Curl (Machine)",,"",2,"normal",50,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Row (Machine)",,"",0,"normal",41,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Row (Machine)",,"",1,"normal",41,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Seated Row (Machine)",,"",2,"normal",41,12,,,9
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Preacher Curl (Barbell)",,"",0,"normal",17.5,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Preacher Curl (Barbell)",,"",1,"normal",17.5,10,,,9
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Preacher Curl (Barbell)",,"",2,"failure",17.5,9,,,9.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Leg Press (Machine)",,"",0,"normal",70,12,,,7.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Leg Press (Machine)",,"",1,"normal",70,12,,,8.5
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Leg Press (Machine)",,"",2,"failure",70,12,,,9
+"Wieczorny trening 🏋️","Sep 29, 2026, 7:35 PM","Sep 29, 2026, 8:48 PM","","Chest Fly (Machine)",,"",0,"normal",40,10,,,8.5
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Bench Press (Dumbbell)",,"",0,"normal",8,12,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Bench Press (Dumbbell)",,"",1,"normal",10,12,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Bench Press (Dumbbell)",,"",2,"normal",10,12,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Dumbbell Row",,"",0,"normal",10,20,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Dumbbell Row",,"",1,"normal",10,20,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Dumbbell Row",,"",2,"normal",10,20,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Shoulder Press (Dumbbell)",,"",0,"normal",6,10,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Shoulder Press (Dumbbell)",,"",1,"normal",7,10,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Shoulder Press (Dumbbell)",,"",2,"normal",7,10,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Bicep Curl (Dumbbell)",0,"",0,"normal",10,20,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Bicep Curl (Dumbbell)",0,"",1,"normal",10,20,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Bicep Curl (Dumbbell)",0,"",2,"normal",10,20,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Triceps Extension (Dumbbell)",0,"",0,"normal",10,10,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Triceps Extension (Dumbbell)",0,"",1,"normal",10,10,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Triceps Extension (Dumbbell)",0,"",2,"normal",10,10,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Chest Fly (Dumbbell)",,"",0,"normal",6,10,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Chest Fly (Dumbbell)",,"",1,"normal",5,10,,,
+"Poranny trening ☀️","Sep 26, 2026, 6:40 AM","Sep 26, 2026, 7:29 AM","","Chest Fly (Dumbbell)",,"",2,"normal",5,10,,,
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Shoulder Press (Machine)",,"",0,"normal",16,12,,,8
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",16,12,,,8.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",16,12,,,9
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Leg Extension (Machine)",,"",0,"normal",37.5,12,,,8.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Leg Extension (Machine)",,"",1,"normal",37.5,12,,,9
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Leg Extension (Machine)",,"",2,"normal",37.5,12,,,9
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Row (Machine)",,"",0,"normal",38,12,,,8
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Row (Machine)",,"",1,"normal",38,12,,,8.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Row (Machine)",,"",2,"normal",38,12,,,9.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Leg Curl (Machine)",,"",0,"normal",48,12,,,7.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Leg Curl (Machine)",,"",1,"normal",48,12,,,8.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Leg Curl (Machine)",,"",2,"normal",48,12,,,9
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Chest Press (Machine)",,"",0,"normal",25,12,,,8.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Chest Press (Machine)",,"",1,"normal",25,12,,,9.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Chest Press (Machine)",,"",2,"failure",25,8,,,9.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Leg Press (Machine)",,"",0,"normal",60,12,,,7.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Leg Press (Machine)",,"",1,"normal",60,12,,,8
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Leg Press (Machine)",,"",2,"failure",60,19,,,9.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Triceps Press",,"",0,"normal",46,12,,,8.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Triceps Press",,"",1,"normal",46,12,,,8.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Seated Triceps Press",,"",2,"normal",46,12,,,9.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Bicep Curl (Machine)",,"",0,"normal",16,12,,,7.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Bicep Curl (Machine)",,"",1,"normal",18,12,,,8.5
+"Poranny trening ☀️","Sep 25, 2026, 11:17 AM","Sep 25, 2026, 12:17 PM","","Bicep Curl (Machine)",,"",2,"failure",18,12,,,9.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Row (Machine)",,"",0,"normal",38,12,,,7.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Row (Machine)",,"",1,"normal",36,12,,,8
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Row (Machine)",,"",2,"normal",38,12,,,8.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Leg Curl (Machine)",,"",0,"normal",46,12,,,7.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Leg Curl (Machine)",,"",1,"normal",46,12,,,8.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Leg Curl (Machine)",,"",2,"normal",46,12,,,8.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Shoulder Press (Machine)",,"",0,"normal",16,10,,,6
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",16,12,,,9
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",16,11,,,9.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Leg Extension (Machine)",,"",0,"normal",35,12,,,8.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Leg Extension (Machine)",,"",1,"normal",35,12,,,9
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Leg Extension (Machine)",,"",2,"normal",35,12,,,9
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Chest Press (Machine)",,"",0,"normal",25,12,,,8.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Chest Press (Machine)",,"",1,"normal",25,12,,,9
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Chest Press (Machine)",,"",2,"failure",25,10,,,10
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Triceps Press",,"",0,"normal",46,12,,,9.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Triceps Press",,"",1,"normal",46,12,,,9.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Seated Triceps Press",,"",2,"normal",46,14,,,9.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Leg Press (Machine)",,"",0,"normal",60,12,,,8
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Leg Press (Machine)",,"",1,"normal",60,13,,,8.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Leg Press (Machine)",,"",2,"failure",60,15,,,9.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Bicep Curl (Machine)",,"",0,"normal",16,12,,,8
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Bicep Curl (Machine)",,"",1,"normal",18,12,,,8.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Bicep Curl (Machine)",,"",2,"failure",18,12,,,9.5
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Knee Raise Parallel Bars",,"",0,"failure",,14,,,
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Knee Raise Parallel Bars",,"",1,"failure",,12,,,
+"Wieczorny trening 🏋️","Sep 23, 2026, 7:42 PM","Sep 23, 2026, 8:49 PM","","Knee Raise Parallel Bars",,"",2,"failure",,10,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Chest Press (Machine)",,"",0,"normal",23,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Chest Press (Machine)",,"",1,"normal",23,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Chest Press (Machine)",,"",2,"normal",23,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Leg Extension (Machine)",,"",0,"normal",30,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Leg Extension (Machine)",,"",1,"normal",30,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Leg Extension (Machine)",,"",2,"normal",30,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Row (Machine)",,"",0,"normal",36,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Row (Machine)",,"",1,"normal",36,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Row (Machine)",,"",2,"normal",36,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Leg Curl (Machine)",,"",0,"normal",41,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Leg Curl (Machine)",,"",1,"normal",46,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Leg Curl (Machine)",,"",2,"normal",46,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Triceps Press",,"",0,"normal",36,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Triceps Press",,"",1,"normal",41,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Seated Triceps Press",,"",2,"normal",41,14,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Leg Press (Machine)",,"",0,"normal",50,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Leg Press (Machine)",,"",1,"normal",60,13,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Leg Press (Machine)",,"",2,"normal",60,16,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Preacher Curl (Barbell)",,"",0,"normal",15,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Preacher Curl (Barbell)",,"",1,"normal",15,12,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Preacher Curl (Barbell)",,"",2,"failure",15,17,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Knee Raise Parallel Bars",,"",0,"normal",,14,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Knee Raise Parallel Bars",,"",1,"normal",,10,,,
+"Nocny trening 🌙","Sep 21, 2026, 9:04 PM","Sep 21, 2026, 10:04 PM","","Knee Raise Parallel Bars",,"",2,"normal",,8,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Leg Extension (Machine)",,"",0,"normal",30,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Leg Extension (Machine)",,"",1,"normal",30,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Leg Extension (Machine)",,"",2,"normal",30,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Leg Curl (Machine)",,"",0,"normal",41,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Leg Curl (Machine)",,"",1,"normal",41,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Leg Curl (Machine)",,"",2,"normal",41,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Leg Press (Machine)",,"",0,"normal",50,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Leg Press (Machine)",,"",1,"normal",50,13,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Leg Press (Machine)",,"",2,"normal",50,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Shoulder Press (Machine)",,"",0,"normal",16,10,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",16,10,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",16,8,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Chest Press (Machine)",,"",0,"normal",23,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Chest Press (Machine)",,"",1,"normal",23,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Chest Press (Machine)",,"",2,"normal",23,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Row (Machine)",,"",0,"normal",36,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Row (Machine)",,"",1,"normal",36,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Seated Row (Machine)",,"",2,"normal",36,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Preacher Curl (Barbell)",,"",0,"normal",15,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Preacher Curl (Barbell)",,"",1,"normal",15,12,,,
+"Wieczorny trening 🏋️","Sep 13, 2026, 7:06 PM","Sep 13, 2026, 7:57 PM","","Preacher Curl (Barbell)",,"",2,"normal",15,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Row (Machine)",,"",0,"normal",32,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Row (Machine)",,"",1,"normal",36,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Row (Machine)",,"",2,"normal",36,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Chest Press (Machine)",,"",0,"normal",18,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Chest Press (Machine)",,"",1,"normal",23,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Chest Press (Machine)",,"",2,"normal",23,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Leg Press (Machine)",,"",0,"normal",50,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Leg Press (Machine)",,"",1,"normal",50,13,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Leg Press (Machine)",,"",2,"normal",50,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Shoulder Press (Machine)",,"",0,"normal",16,10,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Shoulder Press (Machine)",,"",1,"normal",16,10,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Shoulder Press (Machine)",,"",2,"normal",16,8,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Leg Extension (Machine)",,"",0,"normal",30,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Leg Extension (Machine)",,"",1,"normal",30,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Leg Extension (Machine)",,"",2,"normal",30,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Leg Curl (Machine)",,"",0,"normal",41,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Leg Curl (Machine)",,"",1,"normal",41,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Leg Curl (Machine)",,"",2,"normal",41,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Triceps Press",,"",0,"normal",36,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Triceps Press",,"",1,"normal",32,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Seated Triceps Press",,"",2,"normal",32,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Preacher Curl (Barbell)",,"",0,"normal",15,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Preacher Curl (Barbell)",,"",1,"normal",15,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Preacher Curl (Barbell)",,"",2,"normal",15,12,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Knee Raise Parallel Bars",,"",0,"normal",,14,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Knee Raise Parallel Bars",,"",1,"normal",,11,,,
+"BASIC","Sep 11, 2026, 9:08 PM","Sep 11, 2026, 10:25 PM","","Knee Raise Parallel Bars",,"",2,"normal",,6,,,
+</script>
+<script type="text/markdown" id="decyzje-data">
+# Decyzje treningowe
+
+Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`dane/workouts.csv`). Dashboard czyta tabelę poniżej, więc format jest stały:
+
+- **Data**: RRRR-MM-DD, od kiedy decyzja obowiązuje.
+- **Ćwiczenie**: dokładna nazwa z Hevy (`exercise_title`) albo `*`, gdy decyzja dotyczy całego planu. Decyzja dla jednej z maszyn rozpoznawanych po notatce: nazwa z Hevy ze słowem maszyny w nawiasie zamiast oryginalnego, np. „Chest Press (stos)”.
+- **Typ**: jedna z wartości `ciezar`, `kolejnosc`, `kategoria`, `maszyna`, `alias`, `wyjatek`, `zasada`.
+- **Zmiana**: dla niektórych typów dashboard czyta treść, więc trzeba trzymać się wzorca:
+  - `alias`: „Liczyć jako <nazwa z Hevy>”, obowiązuje od daty wpisu. Gdy alias dotyczy tylko okresu, na końcu dopisujemy datę końcową (włącznie): „Liczyć jako <nazwa z Hevy> do RRRR-MM-DD”. Wpisy spoza zakresu są osobną maszyną.
+  - `maszyna`: „Wpisy przed RRRR-MM-DD to inna maszyna (opis)” (zamknięty okres starej maszyny) albo „Okres niepewny do RRRR-MM-DD …” (od daty wpisu do podanej daty włącznie nie wiadomo, która maszyna) albo „… maszyna rozpoznawana po słowie "A" albo "B" w notatce ćwiczenia …” (od daty wpisu jedno ćwiczenie w Hevy dzieli się na maszyny według słowa w notatce ćwiczenia; brak słowa = pierwsza wymieniona maszyna, a dashboard ostrzega, gdy ciężar roboczy takiego treningu odbiega o ponad 15% od mediany 3 poprzednich treningów tej maszyny; oba słowa = trening niepewny, pokazywany jako osobny punkt bez połączenia z innymi).
+  - `kategoria` z Ćwiczenie = `*`: nowe cele, np. „zlozone_maszyna 3 × 10, izolacja 3 × 12”.
+  - `kategoria` dla pojedynczego ćwiczenia: zaczyna się od nazwy kategorii (`zlozone_maszyna`, `izolacja`, `brzuch`, `zlozone_wolne`). Dopisujemy go **tylko wtedy, gdy ćwiczenie zmienia kategorię**; od podanej daty nadpisuje przypisanie z `FAMILIES` w dashboardzie.
+- W tekście komórek nie używamy znaku `|`.
+- Nowe wpisy dopisujemy na końcu tabeli. Starych nie edytujemy; jeśli coś się zmienia, dopisujemy nowy wpis zaczynający się od „Korekta wpisu z RRRR-MM-DD:”.
+
+| Data | Ćwiczenie | Typ | Zmiana | Powód |
+|---|---|---|---|---|
+| 2026-09-23 | Bicep Curl (Machine) | alias | Liczyć jako Preacher Curl (Machine) do 2026-09-25 | Ta sama maszyna, źle wybrana w Hevy (wpisy 23.09 i 25.09); ciężary pasują do maszyny (16/18 -> 20 kg); Jakub nie pamięta na pewno |
+| 2026-09-25 | Seated Shoulder Press (Machine) | kolejnosc | Zawsze pierwsze w bloku góry | Po chest pressie wyniki wyraźnie spadały (11.09: 16 kg × 10/10/8; 4.10: 20 kg × 10/10/10). Od 25.09 na początku: pierwsze czyste 3 × 12 na 16 kg, 1.10 przejście na 20 kg × 3 × 12 |
+| 2026-09-26 | * | wyjatek | Trening hotelowy 2026-09-26 (wolne hantle) wyłączony z oceny progresji maszyn | Pierwszy kontakt z wolnymi ciężarami, inny sprzęt |
+| 2026-09-29 | Chest Press (Machine) | maszyna | Wpisy przed 2026-09-29 to inna maszyna (multi press, stos) | Wyniki nieporównywalne z maszyną na talerze |
+| 2026-09-29 | Chest Press (Machine) | maszyna | Okres niepewny do 2026-10-08 włącznie: wpis może dotyczyć maszyny na talerze albo na stos | Jakub używa obu maszyn zależnie od tego, która jest wolna, a obie były zapisywane pod tą samą nazwą |
+| 2026-10-08 | Leg Press (Machine) | kolejnosc | Zawsze pierwsze ćwiczenie | Robiony na końcu 1.10 dał 75 kg × 12/10/8, po przeniesieniu na początek 8.10 od razu 80 kg × 3 × 12 |
+| 2026-10-08 | Chest Press (Machine) | zasada | Przerwa 2 min przed 3. serią | 3. seria na 30 kg stale kończyła się na 8–10 powtórzeniach; 8.10 pierwszy raz czyste 3 × 12 |
+| 2026-10-08 | * | zasada | Brzuch jest pierwszym ćwiczeniem do pominięcia przy braku czasu; wraca na kolejnym treningu | 8.10 pominięty z powodu późnej pory |
+| 2026-10-09 | Preacher Curl (Machine) | ciezar | Zejście z 20 na 18 kg; cel: odbudować czyste powtórzenia, potem wrócić wyżej. To nie jest regres | Trzy pełne treningi z rzędu bez czystego 3 × 12 (12/12/10, 12/12/9, 10/10/10). Biceps przychodzi zmęczony po ćwiczeniach ciągnących (wiosłowanie, w Plecy+ też lat pulldown) |
+| 2026-10-09 | Crunch (Machine) | ciezar | 10 kg | 20 kg × 10 przy RPE 9 było za ciężko; 15 kg z wyliczenia odrzucone |
+| 2026-10-10 | Chest Press (talerze) | maszyna | Nowe osobne ćwiczenie w Hevy z własnym ciężarem, rodzina: wyciskanie na klatkę | Rozdzielenie dwóch maszyn zapisywanych dotąd jako Chest Press (Machine) |
+| 2026-10-10 | Chest Press (stos) | maszyna | Nowe osobne ćwiczenie w Hevy z własnym ciężarem, rodzina: wyciskanie na klatkę | Rozdzielenie dwóch maszyn zapisywanych dotąd jako Chest Press (Machine) |
+| 2026-10-10 | * | kategoria | Cele powtórzeń zależą od kategorii: zlozone_maszyna 3 × 10, izolacja 3 × 12, brzuch 3 × 15, zlozone_wolne 3 × 8 (na przyszłość, faza 2) | Praktyka (technika, zmęczenie, skoki ciężaru), nie różnica w przyroście masy |
+| 2026-10-10 | Chest Press (Machine) | maszyna | Korekta wpisów z 2026-10-10 o Chest Press (talerze) i (stos): w Hevy zostaje jedno ćwiczenie Chest Press (Machine); maszyna rozpoznawana po słowie "talerze" albo "stos" w notatce ćwiczenia (exercise_notes) | Decyzja Jakuba: prostsze w Hevy |
+</script>
+<script>
+"use strict";
+
+// ---------- Założenia (z zalozenia_treningowe.md): wskazówki, nie sztywne limity ----------
+const CFG = {
+  // Cele powtórzeń wg kategorii, obowiązujące od pierwszego treningu. Późniejsze zmiany
+  // (data i nowe wartości) czytam z wpisów typu „kategoria” z Ćwiczenie = * w decyzje.md.
+  baseTargets: { zlozone_maszyna: 12, izolacja: 12, brzuch: 15, zlozone_wolne: 12 },
+  // Złożone z wolnym ciężarem: rodzina ma kategorię zlozone_maszyna, ale nazwa wskazuje wolny ciężar.
+  freeWeight: /dumbbell|barbell|kettlebell/i,
+  sets: 3,                // serie robocze na ćwiczenie
+  // Ocena serii i sygnały
+  overTargetReps: 3,       // „cel przekroczony”: ostatnia seria ≥ cel + tyle powtórzeń
+  stallSessions: 3,        // zastój: tyle pełnych treningów z rzędu na tym samym ciężarze bez czystego wyniku
+  overdueSessions: 3,      // „zaległe podniesienie”: tyle czystych treningów z rzędu na tym samym ciężarze
+  cleanMaxRpe: 9.5,        // czysta seria: bez upadku i RPE najwyżej tyle (czyli < 10)
+  emptySetMaxRpe: 6,       // pusta objętość: seria z RPE najwyżej tyle nie liczy się do objętości
+  signalsActiveDays: 21,   // sygnały tylko dla maszyn używanych w tylu ostatnich dniach (licząc od najnowszego treningu)
+  maxPerWeek: 3,           // maks. treningów w tygodniu
+  minRestDays: 1,          // minimum dni przerwy między treningami
+  // Kontrola maszyny przypisanej domyślnie (brak słowa maszyny w notatce, np. chest press → talerze):
+  defaultMachineRefSessions: 3,   // tyle poprzednich treningów tej maszyny daje medianę ciężaru roboczego
+  defaultMachineMaxDev: 0.15,     // ostrzeżenie, gdy ciężar roboczy odbiega od mediany o więcej (15%)
+  durationBand: [60, 75],  // docelowa długość treningu (min)
+  weeklySetsBase: 9,       // obecny poziom serii / partię / tydzień
+  weeklySetsPhase2: [10, 20],
+  phase1End: new Date(2026, 9, 31),
+  // Aliasy (błędnie wybrane ćwiczenia) i okresy maszyn są w decyzje.md (typy „alias” i „maszyna”).
+};
+// Rodziny ruchu: zamienniki robiące te same partie (gdy maszyna zajęta) trafiają do jednej grupy.
+// Ciężar dalej liczy się osobno dla każdej maszyny / wariantu.
+// Trzecie pole: kategoria ćwiczenia (zlozone_maszyna, izolacja, brzuch, zlozone_wolne), od niej zależy cel powtórzeń.
+// Czwarte pole: blok treningu (nogi, gora, brzuch), używany w kontroli kolejności.
+const FAMILIES = [
+  ["Leg press", /leg press/i, "zlozone_maszyna", "nogi"],
+  ["Prostowanie nóg", /leg extension/i, "izolacja", "nogi"],
+  ["Uginanie nóg", /leg curl/i, "izolacja", "nogi"],
+  // Maszyny wydzielone z notatki (np. „Chest Press (talerze)” / „(stos)”, decyzje.md) trafiają tu po nazwie.
+  ["Wyciskanie na klatkę", /chest press|bench press/i, "zlozone_maszyna", "gora"],
+  ["Wyciskanie nad głowę", /shoulder press|overhead press|military/i, "zlozone_maszyna", "gora"],
+  ["Wiosłowanie", /\brow\b/i, "zlozone_maszyna", "gora"],
+  ["Ściąganie drążka", /pulldown|pull ?up|chin ?up/i, "zlozone_maszyna", "gora"],
+  ["Rozpiętki", /\bfly\b|pec deck/i, "izolacja", "gora"],
+  ["Biceps", /preacher|bicep|hammer|(?<!leg )curl/i, "izolacja", "gora"],
+  ["Triceps", /tricep|pushdown|skull|\bdip/i, "izolacja", "gora"],
+  ["Brzuch", /crunch|knee raise|leg raise|plank|sit ?up/i, "brzuch", "brzuch"],
+];
+const familyOf = name => (FAMILIES.find(([, re]) => re.test(name)) || [name])[0];
+const blockOf = name => (FAMILIES.find(([, re]) => re.test(name)) || [])[3] || null;
+// Kategoria w dniu `date`: wpis „kategoria” dla tego ćwiczenia w decyzje.md (zmiana kategorii) nadpisuje FAMILIES.
+const categoryOf = (name, date = new Date()) => {
+  const ov = DECISIONS.filter(d => d.type === "kategoria" && d.ex === name && d.date <= date).sort((a, b) => a.date - b.date).pop();
+  if (ov) return ov.change.split(/[\s,;]/)[0];
+  const f = FAMILIES.find(([, re]) => re.test(name));
+  const cat = f ? f[2] : muscleOf(name) === "Brzuch" ? "brzuch" : "izolacja";
+  return cat === "zlozone_maszyna" && CFG.freeWeight.test(name) ? "zlozone_wolne" : cat;
+};
+// Kolejność ruchów w sekcji „Sygnały z danych” (kolejność FBW); `main` = ćwiczenie wyznaczające rodzinę ruchu.
+// Pozycje z `variant` rotują między rutynami Klata+ / Plecy+. `fixed`: stała pozycja sprawdzana w kontroli kolejności
+// ("first" = pierwsze ćwiczenie treningu, "firstUpper" = pierwsze w bloku góry).
+const PLAN = [
+  { main: "Leg Press (Machine)", label: "Leg press", fixed: "first" },
+  { main: "Leg Extension (Machine)", label: "Leg extension" },
+  { main: "Seated Leg Curl (Machine)", label: "Seated leg curl" },
+  { main: "Seated Shoulder Press (Machine)", label: "Wyciskanie nad głowę", fixed: "firstUpper" },
+  { main: "Chest Press (Machine)", label: "Wyciskanie na klatkę" },
+  { main: "Seated Row (Machine)", label: "Wiosłowanie" },
+  { main: "Chest Fly (Machine)", label: "Rozpiętki", variant: "Klata+" },
+  { main: "Lat Pulldown (Machine)", label: "Ściąganie drążka", variant: "Plecy+" },
+  { main: "Preacher Curl (Machine)", label: "Biceps" },
+  { main: "Seated Triceps Press", label: "Triceps" },
+  { main: "Crunch (Machine)", label: "Brzuch" },
+];
+
+const $ =(s, el = document) => el.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const nf = (v, d = 0) => v.toLocaleString("pl-PL", { maximumFractionDigits: d });
+const kg = v => nf(v, 1) + " kg";
+const fmtDate = d => d.toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+const fmtDateLong = d => d.toLocaleDateString("pl-PL", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+const fmtTime = d => d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+const fmtDur = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? `${h} h ${m} min` : `${m} min`; };
+const plSerie = n => n === 1 ? "seria" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? "serie" : "serii";
+const plTrening = n => n === 1 ? "trening" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? "treningi" : "treningów";
+const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+// ---------- decyzje.md (tabela: Data | Ćwiczenie | Typ | Zmiana | Powód) ----------
+function parseDecisions(md) {
+  const rows = [];
+  for (const line of md.split(/\r?\n/)) {
+    const c = line.trim().replace(/^\||\|$/g, "").split("|").map(x => x.trim());
+    if (c.length < 5 || !/^\d{4}-\d{2}-\d{2}$/.test(c[0])) continue;
+    const [y, m, d] = c[0].split("-").map(Number);
+    rows.push({ date: new Date(y, m - 1, d), ex: c[1], type: c[2], change: c[3], why: c[4] });
+  }
+  return rows;
+}
+const DECISIONS = parseDecisions($("#decyzje-data").textContent);
+// Historia celów powtórzeń: baza z CFG, potem każdy wpis „kategoria” dla całego planu (*),
+// np. „zlozone_maszyna 3 × 10, izolacja 3 × 12”. Kategorie niewymienione we wpisie zachowują poprzedni cel.
+const TARGETS = [{ from: new Date(0), reps: { ...CFG.baseTargets } }];
+for (const d of DECISIONS.filter(d => d.type === "kategoria" && d.ex === "*").sort((a, b) => a.date - b.date)) {
+  const reps = { ...TARGETS[TARGETS.length - 1].reps };
+  for (const m of d.change.matchAll(/(\w+)\s+\d+\s*[×x]\s*(\d+)/g)) if (m[1] in reps) reps[m[1]] = +m[2];
+  TARGETS.push({ from: d.date, reps });
+}
+// Cel obowiązujący w dniu `date` dla danego ćwiczenia.
+const targetFor = (name, date) => TARGETS.filter(t => t.from <= date).pop().reps[categoryOf(name, date)];
+
+const isoDay = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const shiftDay = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const dm = d => `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+// Aliasy: wpis „alias”, Zmiana = „Liczyć jako <nazwa z Hevy>” (opcjonalnie „… do RRRR-MM-DD”, włącznie).
+// Obowiązuje od daty wpisu; wpisy spoza zakresu to osobna maszyna.
+const ALIASES = DECISIONS.filter(d => d.type === "alias").map(d => {
+  const m = d.change.match(/jako\s+(.+?)(?:\s+do\s+(\d{4}-\d{2}-\d{2}))?\s*$/i) || [];
+  return { ex: d.ex, to: m[1], from: d.date, until: m[2] ? shiftDay(isoDay(m[2]), 1) : null };
+}).filter(a => a.to);
+const aliasOf = (name, date) => (ALIASES.find(a => a.ex === name && date >= a.from && (!a.until || date < a.until)) || { to: name }).to;
+const baseName = ex => ex.replace(/\s*\(.*?\)\s*/g, " ").trim();
+// Podział jednego ćwiczenia na maszyny według słowa w notatce ćwiczenia (exercise_notes), z wpisu „maszyna”:
+// „… maszyna rozpoznawana po słowie "A" albo "B" w notatce …”. Od daty wpisu: słowo A → „<ćwiczenie> (A)”,
+// słowo B → „<ćwiczenie> (B)”, brak słowa → pierwsza maszyna (A), oba słowa → trening niepewny (z ostrzeżeniem).
+const SPLITS = DECISIONS.filter(d => d.type === "maszyna" && /w notatce/i.test(d.change)).map(d => ({
+  ex: d.ex, from: d.date, words: [...d.change.matchAll(/["„”]([^"„”]+)["„”]/g)].map(m => m[1].trim().toLowerCase()),
+})).filter(s => s.words.length >= 2);
+const uncertainName = (ex, words) => `${baseName(ex)} (niepewne${words.length ? ": " + words.join(" lub ") : ""})`;
+const hasWord = (text, w) => new RegExp(`(^|[^\\p{L}])${w}([^\\p{L}]|$)`, "iu").test(text);
+// Okresy maszyn z wpisów „maszyna”: wpisy danego ćwiczenia w okresie dostają osobną nazwę (osobny ciężar).
+//  - „Wpisy przed RRRR-MM-DD to inna maszyna (opis)” → zamknięty okres starej maszyny,
+//  - „Okres niepewny do RRRR-MM-DD …” → od daty wpisu do podanej daty włącznie nie wiadomo, która maszyna;
+//    możliwe maszyny biorę z późniejszego podziału według notatki (SPLITS) dla tego ćwiczenia.
+const PERIODS = [];
+for (const d of DECISIONS.filter(d => d.type === "maszyna")) {
+  const base = baseName(d.ex);
+  const before = d.change.match(/przed\s+(\d{4}-\d{2}-\d{2})/i);
+  const unsure = d.change.match(/niepewny\s+do\s+(\d{4}-\d{2}-\d{2})/i);
+  if (unsure) {
+    const to = shiftDay(isoDay(unsure[1]), 1);
+    const next = SPLITS.find(s => s.ex === d.ex && s.from >= to);
+    PERIODS.push({ ex: d.ex, from: d.date, to, uncertain: true, name: uncertainName(d.ex, next ? next.words : []) });
+  } else if (before) {
+    const to = isoDay(before[1]), what = (d.change.match(/\((.+?)\)/) || [])[1] || "inna maszyna";
+    PERIODS.push({ ex: d.ex, from: new Date(0), to, uncertain: false, name: `${base} (${what}, do ${dm(shiftDay(to, -1))})` });
+  }
+}
+const periodOf = (name, date) => PERIODS.find(p => p.ex === name && date >= p.from && date < p.to);
+// Maszyna, której okres zamknął wpis „maszyna” (np. multi press do 28.09): tylko historia na wykresach.
+const isClosed = name => PERIODS.some(p => !p.uncertain && p.name === name);
+// Nazwa maszyny dla wpisu z podziałem według notatki; null = ćwiczenie bez podziału w tym dniu.
+function splitOf(name, date, note) {
+  const s = SPLITS.filter(x => x.ex === name && date >= x.from).pop();
+  if (!s) return null;
+  const hits = s.words.filter(w => hasWord(note || "", w));
+  if (hits.length > 1) return { name: uncertainName(name, s.words), uncertain: true, hits };
+  return { name: `${baseName(name)} (${hits[0] || s.words[0]})`, uncertain: false, hits, source: name };
+}
+// Nazwy serii niepewnych (okresy niepewne i treningi z oboma słowami w notatce): bez sygnałów i zastojów.
+const UNCERTAIN = new Set([...PERIODS.filter(p => p.uncertain).map(p => p.name), ...SPLITS.map(s => uncertainName(s.ex, s.words))]);
+// Notatka bez słów maszyny: jeśli po ich usunięciu (i interpunkcji) nic nie zostaje, to nie jest „trening z notatką”.
+function noteContent(note, source) {
+  const s = source && SPLITS.find(x => x.ex === source);
+  if (!s || !note) return note;
+  const rest = s.words.reduce((t, w) => t.replace(new RegExp(`(^|[^\\p{L}])${w}(?=[^\\p{L}]|$)`, "giu"), "$1"), note);
+  return rest.replace(/[\p{P}\p{S}\s]/gu, "") ? note : "";
+}
+// Ćwiczenie źródłowe w Hevy dla maszyny wydzielonej z notatki (do wpisów decyzje.md).
+const sourceOf = name => (SPLITS.find(s => name.startsWith(baseName(s.ex) + " (")) || {}).ex || name;
+
+// ---------- Parsowanie ----------
+function parseCSV(text) {
+  text = text.replace(/^﻿/, "");
+  const rows = [];
+  let row = [], field = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false; }
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += c;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  const head = rows.shift().map(h => h.trim());
+  return rows.filter(r => r.length > 1).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] ?? "").trim()])));
+}
+
+const MON = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+function parseDate(s) {
+  const m = s.match(/^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4}),\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (m && m[1] in MON) {
+    let h = +m[4] % 12;
+    if (m[6].toUpperCase() === "PM") h += 12;
+    return new Date(+m[3], MON[m[1]], +m[2], h, +m[5]);
+  }
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+const num = s => { if (s == null || s === "") return null; const v = parseFloat(s.replace(",", ".")); return isNaN(v) ? null : v; };
+const e1rm = s => s.reps === 1 ? s.kg : s.kg * (1 + s.reps / 30);
+
+function buildModel(rows) {
+  const byKey = new Map(), warnings = new Map();
+  for (const r of rows) {
+    const start = parseDate(r.start_time || "");
+    if (!start || !r.exercise_title) continue;
+    if (!byKey.has(r.start_time)) byKey.set(r.start_time, { title: r.title, start, end: parseDate(r.end_time || ""), sets: [] });
+    const w = byKey.get(r.start_time);
+    const title = aliasOf(r.exercise_title, start);
+    const per = periodOf(title, start), split = per ? null : splitOf(title, start, r.exercise_notes);
+    if (split && split.uncertain) warnings.set(r.start_time + title, { date: start,
+      text: `${title}, ${fmtDateLong(start)}: w notatce ćwiczenia są oba słowa (${split.hits.join(", ")}): „${r.exercise_notes}”. ` +
+        `Trening potraktowany jako niepewny (osobny punkt, bez sygnałów i zastojów). Popraw notatkę w Hevy i wyeksportuj dane ponownie.` });
+    w.sets.push({
+      ex: per ? per.name : split ? split.name : title, type: r.set_type || "normal",
+      kg: num(r.weight_kg), reps: num(r.reps), km: num(r.distance_km), sec: num(r.duration_seconds), rpe: num(r.rpe),
+      note: r.exercise_notes || "", workout: w,
+      // solo: trening z oboma słowami (osobny punkt niepewny); defaulted: maszyna przypisana domyślnie (brak słowa w notatce).
+      solo: !!(split && split.uncertain), defaulted: !!(split && !split.uncertain && !split.hits.length), source: split ? title : null,
+    });
+  }
+  const workouts = [...byKey.values()].sort((a, b) => a.start - b.start);
+  for (const w of workouts) {
+    const working = w.sets.filter(s => s.type !== "warmup");
+    w.minutes = w.end && w.end > w.start ? (w.end - w.start) / 60000 : null;
+    w.volume = sum(working, s => (s.kg > 0 && s.reps > 0) ? s.kg * s.reps : 0);
+    w.workingSets = working.length;
+    w.exerciseCount = new Set(w.sets.map(s => s.ex)).size;
+  }
+  const exMap = new Map();
+  for (const w of workouts) for (const s of w.sets) {
+    if (!exMap.has(s.ex)) exMap.set(s.ex, { name: s.ex, sets: [] });
+    exMap.get(s.ex).sets.push(s);
+  }
+  const exercises = [...exMap.values()].map(analyzeExercise);
+  // Kontrola przypisania domyślnego: trening bez słowa maszyny w notatce trafia do pierwszej maszyny podziału (talerze);
+  // gdy jego ciężar roboczy odbiega o więcej niż CFG.defaultMachineMaxDev od mediany z CFG.defaultMachineRefSessions
+  // poprzednich treningów tej maszyny, ostrzeżenie (tylko informacyjne, trening zostaje w serii).
+  // Do mediany liczą się treningi ze słowem i przypisane domyślnie, z pominięciem tych, które same dostały ostrzeżenie
+  // (wtedy sięgam dalej wstecz); przy mniej niż CFG.defaultMachineRefSessions takich treningów kontrola się nie uruchamia.
+  for (const e of exercises.filter(x => x.kind === "weight" && x.sets.some(s => s.defaulted))) {
+    const info = e.progress.map(p => ({ p, kg: sessionInfo(e, p).kg, defaulted: p.workout.sets.some(s => s.ex === e.name && s.defaulted) }));
+    info.forEach((x, i) => {
+      const ref = info.slice(0, i).filter(r => !r.flagged).slice(-CFG.defaultMachineRefSessions);
+      if (!x.defaulted || ref.length < CFG.defaultMachineRefSessions) return;
+      const med = median(ref.map(r => r.kg)), dev = Math.abs(x.kg - med) / med;
+      if (dev <= CFG.defaultMachineMaxDev) return;
+      x.flagged = true;
+      const src = e.sets.find(s => s.source).source, other = (SPLITS.find(s => s.ex === src) || { words: [] }).words.slice(1).join(" / ");
+      warnings.set(x.p.workout.start + e.name, { date: x.p.date,
+        text: `${src}, ${fmtDateLong(x.p.date)}: brak słowa maszyny w notatce, więc trening trafił do „${e.name}”. ` +
+          `Ciężar roboczy ${kg(x.kg)} odbiega o ${nf(dev * 100)}% od mediany ${kg(med)} z ${ref.length} poprzednich treningów tej maszyny; ` +
+          `mógł być na maszynie ${other || "innej"}. Trening zostaje w serii; jeśli to była inna maszyna, popraw notatkę w Hevy.` });
+    });
+  }
+  return { workouts, exercises, exByName: new Map(exercises.map(e => [e.name, e])),
+    warnings: [...warnings.values()].sort((a, b) => a.date - b.date) };
+}
+const mean = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+const median = arr => { const s = [...arr].sort((a, b) => a - b); return s.length ? (s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2 : null; };
+
+function analyzeExercise(e) {
+  const working = e.sets.filter(s => s.type !== "warmup");
+  const pool = working.length ? working : e.sets;
+  e.sessions = new Set(e.sets.map(s => s.workout)).size;
+  // Okres niepewny (decyzje.md): nie wiadomo, która maszyna, więc bez sygnałów i zastojów.
+  e.uncertain = UNCERTAIN.has(e.name);
+  const weighted = pool.filter(s => s.kg > 0 && s.reps > 0);
+  e.kind = weighted.length ? "weight" : pool.some(s => s.reps > 0) ? "reps" : "cardio";
+
+  if (e.kind === "weight") {
+    // Sety są chronologicznie, więc ścisłe ">" zostawia najwcześniejsze wystąpienie rekordu.
+    e.maxSet = weighted.reduce((b, s) => (s.kg > b.kg || (s.kg === b.kg && s.reps > b.reps)) ? s : b);
+    e.e1rmSet = weighted.reduce((b, s) => e1rm(s) > e1rm(b) ? s : b);
+    e.volSet = weighted.reduce((b, s) => s.kg * s.reps > b.kg * b.reps ? s : b);
+    const byW = new Map();
+    for (const s of weighted) {
+      if (!byW.has(s.workout)) byW.set(s.workout, []);
+      byW.get(s.workout).push(s);
+    }
+    e.progress = [...byW.entries()].map(([w, sets]) => {
+      const top = sets.reduce((b, s) => (s.kg > b.kg || (s.kg === b.kg && s.reps > b.reps)) ? s : b);
+      const bestSet = sets.reduce((b, s) => e1rm(s) > e1rm(b) ? s : b);
+      return {
+        workout: w, date: w.start, kg: top.kg, reps: top.reps, bestSet,
+        e1rm: e1rm(bestSet), volume: sum(sets, s => s.kg * s.reps), sets: sets.length,
+        rpe: mean(sets.filter(s => s.rpe != null).map(s => s.rpe)),
+        // Trening z oboma słowami maszyny nie dostaje kółka „z notatką”: pełna notatka jest w ostrzeżeniu nad sygnałami.
+        note: sets.some(s => s.solo) ? "" : noteContent((e.sets.find(s => s.workout === w && s.note) || {}).note || "", e.sets.find(s => s.workout === w).source),
+        solo: sets.some(s => s.solo),   // osobny punkt niepewny, nie łączony linią
+      };
+    });
+    const first = e.progress[0], last = e.progress[e.progress.length - 1];
+    e.delta = e.progress.length > 1 ? last.kg - first.kg : null;
+    e.sortBest = e.volSet.kg * e.volSet.reps;
+  } else if (e.kind === "reps") {
+    e.repsSet = pool.filter(s => s.reps > 0).reduce((b, s) => s.reps > b.reps ? s : b);
+    e.sortBest = e.repsSet.reps;
+  } else {
+    e.secSet = pool.reduce((b, s) => (s.sec || 0) > (b.sec || 0) ? s : b);
+    e.kmMax = Math.max(0, ...pool.map(s => s.km || 0));
+    e.sortBest = e.secSet.sec || 0;
+  }
+  return e;
+}
+
+// ---------- Tooltip ----------
+const tip = $("#tip");
+function showTip(html, ev) {
+  tip.innerHTML = html;
+  tip.hidden = false;
+  const pad = 14, r = tip.getBoundingClientRect();
+  let x = ev.clientX + pad, y = ev.clientY + pad;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - pad;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - pad;
+  tip.style.left = Math.max(8, x) + "px";
+  tip.style.top = Math.max(8, y) + "px";
+}
+const hideTip = () => { tip.hidden = true; };
+const tipRow = (label, value, color) =>
+  `<div class="r"><span>${color ? `<span class="sw" style="background:${color}"></span>` : ""}${esc(label)}</span><b>${esc(value)}</b></div>`;
+
+// ---------- SVG ----------
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, parent) {
+  const el = document.createElementNS(NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+function niceTicks(min, max, count) {
+  if (min === max) { min -= 1; max += 1; }
+  const raw = (max - min) / count, mag = 10 ** Math.floor(Math.log10(raw)), f = raw / mag;
+  const step = (f >= 7.5 ? 10 : f >= 3.5 ? 5 : f >= 1.5 ? 2 : 1) * mag;
+  const ticks = [];
+  for (let v = Math.floor(min / step) * step; v <= Math.ceil(max / step) * step + step / 2; v += step) ticks.push(+v.toFixed(6));
+  return ticks;
+}
+function barPath(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+
+// series: [{ name, color, dashed, points: [{ d, v, rows, note, title }] }]; każda seria ma własne daty.
+// markers: [{ d, html }] — wpisy z decyzje.md, rysowane jako pionowa przerywana linia z rombem.
+function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFixed = null, fmt = v => nf(v, 1) }) {
+  host.innerHTML = "";
+  const W = host.clientWidth, H = height;
+  const m = { l: 38, r: 14, t: 18, b: 24 };
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" }, host);
+  const all = series.flatMap(s => s.points.map(p => p.v));
+  const dates = [...new Set(series.flatMap(s => s.points.map(p => +p.d)))].sort((a, b) => a - b);
+  const lo = Math.min(...all), hi = Math.max(...all), padY = Math.max((hi - lo) * 0.12, 2);
+  let ticks;
+  if (yFixed) {
+    ticks = [];
+    for (let v = Math.min(yFixed[0], Math.floor(lo)); v <= Math.max(yFixed[1], Math.ceil(hi)); v++) ticks.push(v);
+  } else ticks = niceTicks(Math.max(0, lo - padY), hi + padY, 3);
+  const y0 = ticks[0], y1 = ticks[ticks.length - 1];
+  const t0 = dates[0], t1 = dates[dates.length - 1];
+  const X = t => t1 === t0 ? (m.l + W - m.r) / 2 : m.l + ((+t - t0) / (t1 - t0)) * (W - m.l - m.r);
+  const Y = v => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
+
+  for (const t of ticks) {
+    svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: t === y0 ? css("--axis") : css("--grid"), "stroke-width": 1 }, svg);
+    svgEl("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end", "font-size": 11, fill: css("--text-muted") }, svg).textContent = fmt(t);
+  }
+  // Środkowa data tylko, gdy nie nachodzi na skrajne.
+  const mid = Math.floor((dates.length - 1) / 2);
+  const roomy = dates.length > 2 && X(dates[mid]) - X(dates[0]) > 70 && X(dates[dates.length - 1]) - X(dates[mid]) > 70;
+  const xIdx = dates.length === 1 ? [0] : roomy ? [0, mid, dates.length - 1] : [0, dates.length - 1];
+  xIdx.forEach((i, k) => {
+    const anchor = xIdx.length === 1 ? "middle" : k === 0 ? "start" : k === xIdx.length - 1 ? "end" : "middle";
+    svgEl("text", { x: X(dates[i]), y: H - 6, "text-anchor": anchor, "font-size": 11, fill: css("--text-muted") }, svg).textContent = fmtDate(new Date(dates[i]));
+  });
+
+  // Znaczniki decyzji w zakresie wykresu; wpis z dnia treningu stawiam dokładnie na tym treningu.
+  const marks = [];
+  for (const mk of markers) {
+    const same = dates.find(t => dayDiff(new Date(t), mk.d) === 0), t = same ?? +mk.d;
+    if (t < t0 || t > t1) continue;
+    const g = marks.find(x => x.t === t);
+    if (g) g.html += `<div style="margin-top:8px"></div>` + mk.html; else marks.push({ t, html: mk.html });
+  }
+  const ink = css("--text-secondary");
+  for (const mk of marks) {
+    const x = X(mk.t);
+    svgEl("line", { x1: x, x2: x, y1: m.t - 4, y2: H - m.b, stroke: ink, "stroke-width": 1, "stroke-dasharray": "2 3", opacity: 0.8 }, svg);
+    svgEl("path", { d: `M${x},${m.t - 12}l4,4l-4,4l-4,-4Z`, fill: ink }, svg);
+  }
+
+  const surface = getComputedStyle(host.closest(".mini, section")).backgroundColor;
+  // Linia łączy kolejne punkty serii; punkt `solo` (np. trening niepewny z oboma słowami w notatce) zostaje bez połączeń.
+  series.forEach(s => {
+    const segs = [[]];
+    for (const p of s.points) if (p.solo) segs.push([]); else segs[segs.length - 1].push(p);
+    for (const g of segs.filter(g => g.length >= 2)) {
+      const d = g.map((p, i) => `${i ? "L" : "M"}${X(p.d)},${Y(p.v)}`).join("");
+      svgEl("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round",
+        ...(s.dashed ? { "stroke-dasharray": "6 4" } : {}) }, svg);
+    }
+  });
+  series.forEach(s => s.points.forEach(p => {
+    if (p.note) svgEl("circle", { cx: X(p.d), cy: Y(p.v), r: 8, fill: "none", stroke: css("--text-secondary"), "stroke-width": 1.5 }, svg);
+  }));
+  const dots = series.map(s => s.points.map(p =>
+    svgEl("circle", { cx: X(p.d), cy: Y(p.v), r: 4, fill: s.color, stroke: surface, "stroke-width": 2 }, svg)));
+
+  // Etykieta przy ostatnim punkcie każdej serii, bez nachodzenia na siebie.
+  const placed = [];
+  series.forEach(s => {
+    const p = s.points[s.points.length - 1], x = X(p.d), y = Y(p.v) - 10;
+    if (placed.some(q => Math.abs(q.x - x) < 60 && Math.abs(q.y - y) < 14)) return;
+    placed.push({ x, y });
+    svgEl("text", { x: Math.max(x, m.l + 40), y, "text-anchor": "end", "font-size": 12, "font-weight": 600, fill: css("--text-primary") }, svg)
+      .textContent = unit ? `${fmt(p.v)} ${unit}` : fmt(p.v);
+  });
+
+  const cross = svgEl("line", { y1: m.t, y2: H - m.b, stroke: css("--text-muted"), "stroke-width": 1, "stroke-dasharray": "3 3", visibility: "hidden" }, svg);
+  const hit = svgEl("rect", { x: m.l - 10, y: 0, width: W - m.l - m.r + 20, height: H, fill: "transparent" }, svg);
+  let active = null;
+  const setActive = t => {
+    if (t === active) return;
+    series.forEach((s, si) => s.points.forEach((p, pi) => dots[si][pi].setAttribute("r", +p.d === t ? 6 : 4)));
+    active = t;
+    if (t == null) { cross.setAttribute("visibility", "hidden"); return; }
+    cross.setAttribute("x1", X(t)); cross.setAttribute("x2", X(t));
+    cross.setAttribute("visibility", "visible");
+  };
+  hit.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width);
+    // Kursor przy znaczniku decyzji między treningami: dymek z treścią wpisu.
+    const mk = marks.find(x => !dates.includes(x.t) && Math.abs(X(x.t) - px) <= 6);
+    if (mk) { setActive(null); showTip(mk.html, ev); return; }
+    const t = dates.reduce((b, d) => Math.abs(X(d) - px) < Math.abs(X(b) - px) ? d : b);
+    setActive(t);
+    const hits = series.map(s => ({ s, p: s.points.find(p => +p.d === t) })).filter(x => x.p);
+    showTip(`<div class="t">${esc(fmtDateLong(new Date(t)))}</div><div class="muted" style="margin-bottom:4px">${esc(hits[0].p.title)}</div>` +
+      hits.map(({ s, p }) => (series.length > 1 ? `<div style="margin-top:4px"><span class="sw" style="background:${s.color}"></span><b>${esc(s.name)}</b></div>` : "") + p.rows +
+        (p.note ? `<div class="n">„${esc(p.note)}”</div>` : "")).join("") +
+      // Wpis z decyzje.md z dnia tego treningu.
+      marks.filter(x => x.t === t).map(x => `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--grid)">${x.html}</div>`).join(""), ev);
+  });
+  hit.addEventListener("pointerleave", () => { setActive(null); hideTip(); });
+}
+
+function barChart(host, { labels, values, tips, height = 220, valueLabels = false, axis = true, refs = [], band = null, fmt = v => nf(v), axisFmt = fmt }) {
+  host.innerHTML = "";
+  const W = host.clientWidth, H = height;
+  const m = { l: axis ? 48 : 8, r: 8, t: valueLabels ? 20 : 12, b: 26 };
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" }, host);
+  const max = Math.max(...values, ...refs.map(r => r.v), band ? band[1] : 0, 1);
+  const ticks = axis ? niceTicks(0, max, 4) : [0, max];
+  const top = ticks[ticks.length - 1];
+  const Y = v => m.t + (1 - v / top) * (H - m.t - m.b);
+  const bandW = (W - m.l - m.r) / values.length;
+  const bw = Math.min(48, bandW * 0.7);
+
+  if (axis) for (const t of ticks.slice(1)) {
+    svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: css("--grid"), "stroke-width": 1 }, svg);
+    svgEl("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end", "font-size": 11, fill: css("--text-muted") }, svg).textContent = axisFmt(t);
+  }
+  if (band) {
+    svgEl("rect", { x: m.l, width: W - m.l - m.r, y: Y(band[1]), height: Y(band[0]) - Y(band[1]), fill: "rgba(255,255,255,0.06)" }, svg);
+    svgEl("text", { x: m.l + 4, y: Y(band[1]) - 5, "font-size": 11, fill: css("--text-secondary") }, svg).textContent = band[2];
+  }
+  const labelEvery = Math.max(1, Math.ceil(46 / bandW));
+  const bars = values.map((v, i) => {
+    const cx = m.l + bandW * i + bandW / 2;
+    const h = Y(0) - Y(v);
+    const bar = h > 0 ? svgEl("path", { d: barPath(cx - bw / 2, Y(v), bw, h, 4), fill: css("--series-1") }, svg) : null;
+    if (valueLabels) svgEl("text", { x: cx, y: Y(v) - 6, "text-anchor": "middle", "font-size": 12, "font-weight": 600, fill: v ? css("--text-primary") : css("--text-muted") }, svg).textContent = fmt(v);
+    if (i % labelEvery === 0) svgEl("text", { x: cx, y: H - 8, "text-anchor": "middle", "font-size": 11, fill: css("--text-muted") }, svg).textContent = labels[i];
+    return bar;
+  });
+  svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: css("--axis"), "stroke-width": 1 }, svg);
+  for (const r of refs) {
+    svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(r.v), y2: Y(r.v), stroke: css("--text-secondary"), "stroke-width": 1, "stroke-dasharray": "4 4" }, svg);
+    svgEl("text", { x: W - m.r, y: Y(r.v) - 5, "text-anchor": "end", "font-size": 11, fill: css("--text-secondary") }, svg).textContent = r.label;
+  }
+  values.forEach((v, i) => {
+    const hit = svgEl("rect", { x: m.l + bandW * i, y: m.t, width: bandW, height: H - m.t - m.b, fill: "transparent" }, svg);
+    hit.addEventListener("pointermove", ev => {
+      bars.forEach((b, j) => b && b.setAttribute("opacity", j === i ? 1 : 0.45));
+      showTip(tips[i], ev);
+    });
+    hit.addEventListener("pointerleave", () => { bars.forEach(b => b && b.setAttribute("opacity", 1)); hideTip(); });
+  });
+}
+
+// ---------- Sekcje ----------
+let MODEL = null;
+
+const DAY = 864e5;
+const midnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const weekStart = d => addDays(midnight(d), -((d.getDay() + 6) % 7));
+const dayDiff = (a, b) => Math.round((midnight(b) - midnight(a)) / DAY);
+
+function weeks(workouts) {
+  const out = [];
+  const last = weekStart(workouts[workouts.length - 1].start);
+  for (let w = weekStart(workouts[0].start); w <= last; w = addDays(w, 7)) {
+    out.push({ start: w, end: addDays(w, 6), items: workouts.filter(x => weekStart(x.start).getTime() === w.getTime()) });
+  }
+  return out;
+}
+
+function renderKPIs() {
+  const { workouts } = MODEL;
+  const wk = weeks(workouts);
+  const totalVol = sum(workouts, w => w.volume);
+  const timed = workouts.filter(w => w.minutes);
+  const totalMin = sum(timed, w => w.minutes);
+  const first = workouts[0].start, last = workouts[workouts.length - 1].start;
+  $("#range").textContent = `${fmtDateLong(first)} – ${fmtDateLong(last)}`;
+  const left = dayDiff(new Date(), CFG.phase1End);
+  $("#phase").textContent = `Faza 1 do ${fmtDate(CFG.phase1End)}` +
+    (left >= 0 ? ` (za ${left} ${plDni(left)})` : " (termin minął; czas na ocenę)") + " · szczegóły: zalozenia_treningowe.md, sekcja 11";
+  $("#merged").textContent = "Z decyzje.md: " + [
+    ...ALIASES.map(a => `${a.ex} ${a.until ? `od ${dm(a.from)} do ${dm(shiftDay(a.until, -1))} ` : ""}liczę jako ${a.to}`),
+    ...PERIODS.map(p => `${p.ex} ${p.uncertain ? `od ${dm(p.from)} do ${dm(shiftDay(p.to, -1))} to okres niepewny` : `przed ${dm(p.to)} to osobna maszyna`} („${p.name}”)`),
+    ...SPLITS.map(s => `${s.ex} od ${dm(s.from)}: maszyna wg słowa w notatce ćwiczenia (${s.words.map(w => `„${w}”`).join(" / ")}; brak słowa = ${s.words[0]}, oba = niepewne)`),
+  ].join(". ") + ".";
+  const CAT_LABEL ={ zlozone_maszyna: "złożone (maszyna)", izolacja: "izolacja", brzuch: "brzuch", zlozone_wolne: "złożone (wolne)" };
+  $("#targets").textContent = "Cele powtórzeń (decyzje.md): " + TARGETS.map((t, i) =>
+    `${i ? "od " + fmtDate(t.from) : "na początku"}: ${Object.entries(t.reps).map(([c, r]) => `${CAT_LABEL[c] || c} ${CFG.sets} × ${r}`).join(", ")}`).join(" · ");
+  const tiles = [
+    ["Treningi", nf(workouts.length), `w ${wk.length} ${wk.length === 1 ? "tygodniu" : "tygodniach"}`],
+    ["Średnio w tygodniu", nf(workouts.length / wk.length, 1), `treningów (założenie: maks. ${CFG.maxPerWeek})`],
+    ["Łączna objętość", totalVol >= 10000 ? nf(totalVol / 1000, 1) + " t" : kg(totalVol), `średnio ${kg(Math.round(totalVol / workouts.length))} na trening`],
+    ["Czas na siłowni", fmtDur(totalMin), timed.length ? `średnio ${fmtDur(totalMin / timed.length)}` : ""],
+    ["Serie robocze", nf(sum(workouts, w => w.workingSets)), `${MODEL.exercises.length} różnych ćwiczeń`],
+  ];
+  $("#kpis").innerHTML = tiles.map(([l, v, n]) =>
+    `<div class="kpi"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="note">${esc(n)}</div></div>`).join("");
+}
+
+// ---------- Sygnały, kolejność, zastoje (wg założeń) ----------
+const short = n => n.replace(/\s*\(.*?\)\s*/g, " ").trim();
+// Dni wyłączone z oceny progresji (wpisy „wyjatek” dla całego planu w decyzje.md).
+const isExcluded = d => DECISIONS.some(x => x.type === "wyjatek" && x.ex === "*" && dayDiff(x.date, d) === 0);
+
+// Każdą sesję oceniam względem celu obowiązującego w dniu tego treningu.
+// Ciężar roboczy sesji (kg) to najwyższy ciężar z co najmniej CFG.sets seriami roboczymi:
+//  - mode "normal": na najwyższym ciężarze są pełne serie (albo w sesji jest tylko jeden ciężar),
+//  - mode "test": jedna cięższa seria po pełnych seriach roboczych; to seria testowa, nie zmienia ciężaru roboczego,
+//  - mode "ramp": podbijanie w trakcie (trening przejściowy, wejście na nowy ciężar); nie liczy się do „czysto ×N”
+//    ani do zastoju na żadnym ciężarze i nie przerywa serii — ocena nowego ciężaru zaczyna się od kolejnego pełnego treningu,
+//  - mode "drop": zejście w trakcie (start na najwyższym ciężarze, potem lżej); trening nieczysty na ciężarze startowym,
+//    wlicza się do zastoju na tym ciężarze.
+function sessionInfo(e, p) {
+  const target = targetFor(e.name, p.date);
+  const work = p.workout.sets.filter(s => s.ex === e.name && s.type !== "warmup" && s.reps > 0);
+  const count = k => work.filter(s => s.kg === k).length;
+  const kgs = [...new Set(work.map(s => s.kg))];
+  let kgW = p.kg, mode = "normal", test = null;
+  if (kgs.length > 1 && count(p.kg) < CFG.sets) {
+    const fullKg = Math.max(...kgs.filter(k => count(k) >= CFG.sets));
+    const heavyIdx = work.findIndex(s => s.kg === p.kg);
+    const lastFullIdx = work.map(s => s.kg).lastIndexOf(fullKg);
+    if (isFinite(fullKg) && count(p.kg) === 1 && heavyIdx > lastFullIdx) { mode = "test"; kgW = fullKg; test = work[heavyIdx]; }
+    else if (heavyIdx === 0) mode = "drop";
+    else mode = "ramp";
+  }
+  const top = work.filter(s => s.kg === kgW);
+  const reps = top.map(s => s.reps);
+  // Sesja skrócona (mniej niż CFG.sets serii roboczych, np. przy zakwasach) i podbijanie nie liczą się do oceny progresji.
+  const full = work.length >= CFG.sets && mode !== "ramp";
+  return {
+    p, work, top, reps, target, kg: kgW, mode, test, full,
+    lastReps: reps[reps.length - 1], minReps: Math.min(...reps), avgReps: mean(reps),
+    rpe: mean(top.filter(s => s.rpe != null).map(s => s.rpe)),
+    // Czysto = co najmniej CFG.sets serii na ciężarze roboczym, wszystkie na cel, bez upadku i z RPE najwyżej CFG.cleanMaxRpe.
+    clean: full && mode !== "drop" && top.length >= CFG.sets && top.every(s => s.reps >= target && s.type !== "failure" && !(s.rpe > CFG.cleanMaxRpe)),
+  };
+}
+// Opis sesji: ciężar × powtórzenia (cel z dnia), seria testowa albo wszystkie ciężary przy podbijaniu / zejściu.
+function sessionDesc(x) {
+  const tail = ` · ${fmtDate(x.p.date)}${x.rpe != null ? ` · RPE ${nf(x.rpe, 1)}` : ""}`;
+  if (x.mode === "ramp" || x.mode === "drop") {
+    const groups = [];
+    for (const s of x.work) { const g = groups[groups.length - 1]; if (g && g.kg === s.kg) g.reps.push(s.reps); else groups.push({ kg: s.kg, reps: [s.reps] }); }
+    return groups.map(g => `${nf(g.kg, 1)} kg × ${g.reps.join("/")}`).join(", ") + ` (cel ${x.target})` + tail;
+  }
+  const lighter = x.work.length - x.top.length - (x.test ? 1 : 0);
+  return `${nf(x.kg, 1)} kg × ${x.reps.join("/")} (cel ${x.target})${lighter ? ` (+${lighter} lżej)` : ""}` +
+    (x.test ? ` + seria testowa ${nf(x.test.kg, 1)} kg × ${x.test.reps}` : "") + tail;
+}
+
+// Statystyki sesji ćwiczenia (bez dni-wyjątków). Każda sesja ma własny cel z dnia treningu (x.target).
+function exStats(e) {
+  if (e.uncertain) return null;
+  const info = e.progress.filter(p => !isExcluded(p.date)).map(p => sessionInfo(e, p));
+  if (!info.length) return null;
+  const full = info.filter(x => x.full);
+  const li = info[info.length - 1];          // ostatnia sesja (do wyświetlenia)
+  const lf = full[full.length - 1] || li;     // ostatnia pełna sesja (do oceny)
+  const kgNow = lf.kg;
+  let streak = 0, unclean = 0;
+  for (let i = full.length - 1; i >= 0 && full[i].kg === kgNow && full[i].clean; i--) streak++;
+  for (let i = full.length - 1; i >= 0 && full[i].kg === kgNow && !full[i].clean; i--) unclean++;
+  return { info, full, li, lf, kgNow, streak, unclean };
+}
+
+// Wpis „ciezar” w decyzje.md po ostatnim treningu tej maszyny: decyzja już zapadła, sygnał z danych jest nieaktualny.
+const decisionAfter = (e, s) => DECISIONS.filter(x => x.type === "ciezar" && x.ex === e.name && dayDiff(s.li.p.date, x.date) > 0)
+  .sort((a, b) => a.date - b.date).pop();
+
+// Sygnał z ostatniego pełnego treningu, oceniany względem celu z jego dnia.
+function signalOf(e, s) {
+  const li = s.lf, notes = [];
+  const dec = decisionAfter(e, s);
+  if (dec) return { st: "old", label: "◆ Decyzja podjęta", why: `${fmtDate(dec.date)}: ${dec.change}.` };
+  // Ostatni trening z podbijaniem w trakcie: trening przejściowy, sygnał informacyjny, ciężar nie jest oceniany.
+  if (s.li.mode === "ramp") {
+    const n = s.li.work.filter(x => x.kg === s.li.p.kg).length;
+    return { st: "old", label: "↗ Podbijanie w trakcie", why: `Trening przejściowy: na ${kg(s.li.p.kg)} tylko ${n} ${plSerie(n)}. ` +
+      `Nie liczy się do „czysto ×N” ani do zastoju; ocena nowego ciężaru zacznie się od kolejnego pełnego treningu.` };
+  }
+  // Zejście w trakcie w treningu skróconym: pokazuję, ale skrócony trening nie wlicza się do oceny.
+  if (s.li.mode === "drop" && !s.li.full) return { st: "down", label: "↘ Zejście w trakcie",
+    why: `Start na ${kg(s.li.kg)}, potem lżej. Trening skrócony (${s.li.work.length} ${plSerie(s.li.work.length)}), więc nie wlicza się do oceny.` };
+  if (!li.full) return { st: "old", label: "◌ Niepełny", why: `Brak pełnego treningu (${CFG.sets} serie robocze na jednym ciężarze) do oceny.` };
+  if (li.test) notes.push(`Seria testowa ${kg(li.test.kg)} × ${li.test.reps} nie zmienia oceny ciężaru roboczego.`);
+  // Spadek ciężaru względem poprzedniego pełnego treningu: świadomy, gdy w decyzje.md jest wpis „ciezar”
+  // dla tej maszyny z datą po poprzednim treningu i najpóźniej w dniu tego treningu.
+  const prev = s.full[s.full.length - 2];
+  if (prev && li.kg < prev.kg) {
+    const d = DECISIONS.find(x => x.type === "ciezar" && x.ex === e.name && dayDiff(prev.p.date, x.date) > 0 && x.date <= li.p.date);
+    if (d) return { st: "old", label: "↓ Świadome zejście", why: `${kg(prev.kg)} → ${kg(li.kg)} wg decyzje.md (${fmtDate(d.date)}).` };
+    notes.push(`Spadek ${kg(prev.kg)} → ${kg(li.kg)} bez wpisu w decyzje.md.`);
+  }
+  const { streak, unclean } = s;
+  let sig;
+  const almost = unclean === CFG.stallSessions - 1 ? " Jeszcze jeden trening bez czystego wyniku i będzie zastój." : "";
+  if (unclean >= CFG.stallSessions) sig = { st: "stall", label: "■ Zastój", why: `${unclean} ${plTrening(unclean)} z rzędu na ${kg(s.kgNow)} bez czystego wyniku.` };
+  else if (li.mode === "drop") sig = { st: "down", label: "↘ Zejście w trakcie",
+    why: `Start na ${kg(li.kg)}, potem lżej; trening nieczysty na ${kg(li.kg)} (wlicza się do zastoju na tym ciężarze).` + almost };
+  else if (!li.clean && li.minReps >= li.target) sig = { st: "hold", label: "● Na cel, bez zapasu",
+    why: `Powtórzenia na cel, ale była seria do upadku albo z RPE powyżej ${nf(CFG.cleanMaxRpe, 1)}, więc trening nie liczy się jako czysty.` + almost };
+  else if (!li.clean) sig = { st: "down", label: "▼ Poniżej celu", why: `Najsłabsza seria ${li.minReps} z ${li.target}.` + almost };
+  else if (li.lastReps >= li.target + CFG.overTargetReps) sig = { st: "up", label: "▲ Cel przekroczony", why: `Ostatnia seria ${li.lastReps} przy celu ${li.target}` +
+    (streak >= 2 ? `; czysto ${streak} ${plTrening(streak)} z rzędu.` : ".") };
+  else if (streak >= 2) sig = { st: "up", label: `▲ Czysto ×${streak}`, why: `${streak} ${plTrening(streak)} z rzędu czysto na ${kg(s.kgNow)}.` };
+  else sig = { st: "hold", label: "● Czysto ×1", why: `Pierwszy czysty trening na ${kg(s.kgNow)}.` };
+  return { ...sig, why: [sig.why, ...notes].join(" ") };
+}
+
+function variantOf(w) {
+  const t = w.title.match(/klata\+|plecy\+/i);
+  if (t) return t[0].toLowerCase() === "klata+" ? "Klata+" : "Plecy+";
+  const fly = w.sets.some(s => /chest fly \(machine\)/i.test(s.ex)), pd = w.sets.some(s => /lat pulldown/i.test(s.ex));
+  return fly && !pd ? "Klata+" : pd && !fly ? "Plecy+" : null;
+}
+
+const HEAVY = /leg press|shoulder press|chest press/i;   // tylko kontrola rozgrzewek
+const COMPOUND = new Set(["zlozone_maszyna", "zlozone_wolne"]);
+const seqOf = w => [...new Set(w.sets.map(s => s.ex))].filter(n => MODEL.exByName.get(n).kind !== "cardio");
+// Grupy do kontroli kolejności wyprowadzone z FAMILIES (blok, kategoria) i PLAN (stałe pozycje, lista ruchów).
+const fixedFam = kind => familyOf((PLAN.find(r => r.fixed === kind) || {}).main || "");
+// Ruchy wymagane w treningu: pozycje PLAN; pozycje z `variant` (rotacja) wystarczy zrobić w jednym wariancie.
+const SLOTS = PLAN.reduce((acc, r) => {
+  const g = r.variant && acc.find(x => x.variant);
+  if (g) { g.label += " / " + r.label; g.fams.push(familyOf(r.main)); }
+  else acc.push({ label: r.label, fams: [familyOf(r.main)], legs: blockOf(r.main) === "nogi", variant: !!r.variant });
+  return acc;
+}, []);
+
+function orderCheck(w, prev) {
+  const seq = seqOf(w), r = {};
+  const first = fixedFam("first"), firstUp = fixedFam("firstUpper");
+  const lp = seq.findIndex(n => familyOf(n) === first);
+  const legsDay = seq.some(n => blockOf(n) === "nogi");
+  r.leg = lp === 0 ? { st: "ok" } : lp > 0 ? { st: "bad", t: `${lp + 1}. pozycja` }
+    : prev && !seqOf(prev).some(n => familyOf(n) === first) ? { st: "bad", t: "brak 2. raz z rzędu" } : { st: "na", t: "pominięte (ok okazjonalnie)" };
+  const upper = seq.filter(n => blockOf(n) === "gora");
+  const isIso = n => categoryOf(n, w.start) === "izolacja";
+  const sp = upper.findIndex(n => familyOf(n) === firstUp);
+  r.shoulder = sp === 0 ? { st: "ok" } : sp > 0 ? { st: "bad", t: `po: ${short(upper[0])}` } : { st: "bad", t: "brak" };
+  const firstIso = upper.findIndex(isIso);
+  const lateComp = firstIso < 0 ? -1 : upper.findIndex((n, i) => i > firstIso && !isIso(n));
+  r.comp = lateComp < 0 ? { st: "ok" } : { st: "bad", t: `${short(upper[firstIso])} przed ${short(upper[lateComp])}` };
+  const absIdx = seq.map((n, i) => blockOf(n) === "brzuch" ? i : -1).filter(i => i >= 0);
+  r.abs = !absIdx.length ? { st: "na", t: "–" } : seq.slice(absIdx[0]).every(n => blockOf(n) === "brzuch") ? { st: "ok" } : { st: "bad", t: "nie na końcu" };
+  const missing = SLOTS.filter(sl => !(sl.legs && !legsDay) && !seq.some(n => sl.fams.includes(familyOf(n)))).map(sl => sl.label.toLowerCase());
+  r.missing = missing.length ? { st: "bad", t: missing.join(", ") } : { st: "ok" };
+  const noWarm = seq.filter(n => HEAVY.test(n) && !w.sets.some(s => s.ex === n && s.type === "warmup"));
+  r.warm = noWarm.length ? { st: "bad", t: "brak: " + noWarm.map(short).join(", ") } : { st: "ok" };
+  // Upadek (albo RPE powyżej CFG.cleanMaxRpe) we wszystkich ćwiczeniach złożonych wg kategorii z FAMILIES / decyzje.md.
+  const fail = [...new Set(w.sets.filter(s => COMPOUND.has(categoryOf(s.ex, w.start)) && (s.type === "failure" || s.rpe > CFG.cleanMaxRpe)).map(s => s.ex))];
+  r.fail = fail.length ? { st: "bad", t: fail.map(short).join(", ") } : { st: "ok" };
+  r.seq = seq;
+  return r;
+}
+
+// Ostatni wpis z decyzje.md dla maszyny (bez przypisań kategorii, te widać w kolumnie „Cel”).
+// Dla maszyny wydzielonej z notatki liczą się też wpisy ćwiczenia źródłowego (np. Chest Press (Machine)).
+const lastDecision = name => DECISIONS.filter(d => (d.ex === name || d.ex === sourceOf(name)) && d.type !== "kategoria")
+  .sort((a, b) => a.date - b.date).pop();
+
+function renderSignals() {
+  const ws = MODEL.workouts, latest = ws[ws.length - 1].start, today = new Date();
+  const lastUse = x => Math.max(...x.sets.map(s => +s.workout.start));
+  // Maszyna aktywna = używana w ostatnich CFG.signalsActiveDays dniach (licząc od najnowszego treningu).
+  const active = x => dayDiff(new Date(lastUse(x)), latest) <= CFG.signalsActiveDays;
+  const desc = sessionDesc;
+  // Cel obowiązujący dziś; jeśli w decyzje.md jest już zmiana na przyszłość, pokazuję ją obok.
+  const goal = name => {
+    const now = targetFor(name, today), up = TARGETS.find(t => t.from > today && targetFor(name, t.from) !== now);
+    return `${CFG.sets} × ${now}` + (up ? `<div class="why">od ${esc(fmtDate(up.from))}: ${CFG.sets} × ${targetFor(name, up.from)}</div>` : "");
+  };
+  const decCell = name => {
+    const d = lastDecision(name);
+    return d ? `<span class="why" title="${esc(d.why)}">${esc(fmtDate(d.date))} · ${esc(d.type)}: ${esc(d.change)}</span>` : `<span class="dim">—</span>`;
+  };
+  let i = 0;
+  const rows = PLAN.flatMap(r => {
+    i++;
+    const fam = familyOf(r.main);
+    // Każda aktywna maszyna z rodziny ruchu osobno (osobny ciężar), od ostatnio używanej.
+    const all = MODEL.exercises
+      .filter(x => familyOf(x.name) === fam && x.kind === "weight" && !isClosed(x.name))
+      .map(x => ({ e: x, s: exStats(x) })).filter(x => x.s)
+      .sort((a, b) => lastUse(b.e) - lastUse(a.e));
+    const machines = all.filter(x => active(x.e));
+    const head = (k) => `<td class="nw dim">${k ? "" : i}</td>
+      <td>${k ? "" : `<b>${esc(r.label)}</b>${r.variant ? ` <span class="tag">${r.variant}</span>` : ""}`}`;
+    if (!machines.length) {
+      // Same treningi z okresu niepewnego (decyzje.md): nie ma z czym porównywać, do pierwszego treningu na nazwanej maszynie.
+      const unsure = MODEL.exercises.filter(x => familyOf(x.name) === fam && x.uncertain && x.progress.length)
+        .sort((a, b) => lastUse(b) - lastUse(a))[0];
+      const lastU = unsure && sessionInfo(unsure, unsure.progress[unsure.progress.length - 1]);
+      return [`<tr>${head(0)}<div class="why">${esc(unsure ? unsure.name : r.main)}</div></td>
+        <td class="dim">${lastU ? esc(desc(lastU)) : "—"}</td><td class="nw">${goal(r.main)}</td>
+        <td>${unsure ? `<span class="badge st-old">◌ Brak porównywalnych danych</span><div class="why">Ostatnie treningi w okresie niepewnym (decyzje.md). Sygnały wrócą po pierwszym treningu z rozpoznaną maszyną.</div>`
+          : all.length ? `<span class="badge st-old">◌ Nieużywane</span><div class="why">Żadna maszyna z tego ruchu nie była używana w ostatnich ${CFG.signalsActiveDays} dniach (ostatnio ${esc(fmtDate(new Date(lastUse(all[0].e))))}).</div>`
+          : `<span class="badge st-old">◌ Brak danych</span>`}</td>
+        <td>${decCell(unsure ? PERIODS.find(p => p.name === unsure.name).ex : r.main)}</td></tr>`];
+    }
+    return machines.map(({ e, s }, k) => {
+      const sig = signalOf(e, s), li = s.li;
+      // Ostatni trening nieoceniany (skrócony albo z podbijaniem): pokazuję też ostatni pełny.
+      const skipped = !li.full && s.lf !== li;
+      const extra = skipped && li.mode === "normal" ? `Trening z ${fmtDate(li.p.date)} skrócony (${li.work.length} ${plSerie(li.work.length)}), oceniam ostatni pełny.` : "";
+      return `<tr>${head(k)}<div class="why">${esc(e.name)}</div></td>
+        <td class="dim">${esc(desc(li))}${skipped ? `<div class="why">ostatni pełny: ${esc(desc(s.lf))}</div>` : ""}</td>
+        <td class="nw">${goal(e.name)}</td>
+        <td><span class="badge st-${sig.st}">${esc(sig.label)}</span><div class="why">${esc([sig.why, extra].filter(Boolean).join(" "))}</div></td>
+        <td>${decCell(e.name)}</td>
+      </tr>`;
+    });
+  });
+  // Ostrzeżenia z danych: w notatce ćwiczenia oba słowa maszyny, więc trening jest niepewny.
+  $("#signals-warn").innerHTML = MODEL.warnings.map(x =>
+    `<div class="warn" style="margin-bottom:12px"><span class="ic">⚠</span><span>${esc(x.text)}</span></div>`).join("");
+  $("#signals-rules").textContent =`Każdy trening oceniany względem celu obowiązującego w jego dniu. ` +
+    `Czysto = co najmniej ${CFG.sets} serie robocze na jednym ciężarze, wszystkie na cel, bez upadku i z RPE najwyżej ${nf(CFG.cleanMaxRpe, 1)}. ` +
+    `Podbijanie w trakcie (mniej niż ${CFG.sets} serie na najwyższym ciężarze) to trening przejściowy: nie liczy się do „czysto ×N” ani do zastoju na żadnym ciężarze i nie przerywa serii; ocena nowego ciężaru zaczyna się od kolejnego pełnego treningu. ` +
+    `Zejście w trakcie (start na najwyższym ciężarze, potem lżej) to trening nieczysty na ciężarze startowym. ` +
+    `Jedna cięższa seria po pełnych seriach to seria testowa. ` +
+    `Cel przekroczony = ostatnia seria o ${CFG.overTargetReps} lub więcej powt. ponad cel. ` +
+    `Zastój = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego wyniku. ` +
+    `Treningi skrócone, dni oznaczone w decyzje.md jako wyjątek i maszyny nieużywane od ponad ${CFG.signalsActiveDays} dni pomijam. RPE traktuję pomocniczo.`;
+  $("#plan").className = "plan";
+  $("#plan").innerHTML = `<thead><tr><th>#</th><th>Ruch / maszyna</th><th>Ostatni wynik</th><th>Cel</th><th>Sygnał</th><th>Ostatnia decyzja (decyzje.md)</th></tr></thead>
+    <tbody>${rows.join("")}</tbody>`;
+}
+
+function renderOrder() {
+  const ws = MODEL.workouts;
+  const cell = c => c.st === "ok" ? `<span class="ok">✓</span>` : c.st === "na" ? `<span class="na">${esc(c.t)}</span>` : `<span class="bad">✗ ${esc(c.t)}</span>`;
+  const rows = ws.map((w, i) => ({ w, r: orderCheck(w, ws[i - 1]) })).reverse();
+  $("#order").className = "order";
+  $("#order").innerHTML = `<thead><tr><th>Trening</th><th>Wariant</th><th>Leg press 1.</th><th>Shoulder press 1. w górze</th><th>Złożone przed izolacją</th>
+      <th>Brzuch na końcu</th><th>Pominięte</th><th>Rozgrzewka</th><th>Bez upadku w złożonych</th></tr></thead>
+    <tbody>${rows.map(({ w, r }) => {
+      const v = variantOf(w);
+      return `<tr><td class="nw">${esc(fmtDate(w.start))}<div class="why">${esc(w.title)}</div></td>
+        <td class="nw">${v ? "FBW_" + v : `<span class="na">–</span>`}</td>
+        ${[r.leg, r.shoulder, r.comp, r.abs, r.missing, r.warm, r.fail].map(c => `<td>${cell(c)}</td>`).join("")}</tr>`;
+    }).join("")}</tbody>`;
+}
+
+function renderPlateaus() {
+  const ws = MODEL.workouts;
+  // Bez maszyn z zamkniętym okresem i bez okresów niepewnych (exStats = null); te zostają tylko na wykresach.
+  const ex = MODEL.exercises.filter(e => e.kind === "weight" && e.progress.length >= 2 && !isClosed(e.name))
+    .map(e => ({ e, s: exStats(e) })).filter(x => x.s).map(x => ({ ...x, dec: decisionAfter(x.e, x.s) }));
+  const stalls = ex.filter(x => x.s.unclean >= CFG.stallSessions).sort((a, b) => b.s.unclean - a.s.unclean);
+  const overdue = ex.filter(x => x.s.streak >= CFG.overdueSessions && !x.dec);
+  const watch = ex.filter(x => x.s.unclean === CFG.stallSessions - 1 && !x.dec).map(x => x.e.name);
+
+  let html = stalls.map(({ e, s, dec }) => {
+    const runs = s.full.slice(-s.unclean);
+    const pos = runs.map(x => seqOf(x.p.workout).indexOf(e.name) + 1);
+    const rows = runs.map((x, k) => {
+      const w = x.p.workout, wi = ws.indexOf(w), n = seqOf(w).length;
+      const rest = wi > 0 ? dayDiff(ws[wi - 1].start, w.start) : null;
+      return `<tr><td>${esc(fmtDate(x.p.date))}</td><td><b>${esc(x.reps.join("/"))}</b> <span class="dim">z ${x.target}</span></td><td>${pos[k]}. z ${n}</td>
+        <td>${rest != null ? `${rest} ${plDni(rest)}` : "–"}</td><td>${x.rpe != null ? esc(nf(x.rpe, 1)) : "–"}</td></tr>`;
+    }).join("");
+    const hints = [];
+    if (runs.every(x => x.reps.length >= 2 && x.lastReps < x.target && x.reps.slice(0, -1).every(r => r >= x.target)))
+      hints.push("Spada tylko ostatnia seria, pierwsze wychodzą czysto. To typowy objaw za krótkiej przerwy: daj pełne 2 min przed ostatnią serią.");
+    if (Math.max(...pos) - Math.min(...pos) >= 2) hints.push(`Pozycja w treningu się zmieniała (${pos.join(", ")}). Sprawdź, czy wynik nie zależy od kolejności.`);
+    if (runs.some(x => x.top.some(z => z.type === "failure"))) hints.push("Były serie do upadku. W ćwiczeniach złożonych to nie jest standard.");
+    if (runs.some(x => x.work.length < CFG.sets)) hints.push("Nie zawsze były pełne 3 serie robocze.");
+    hints.push("Sprawdź też technikę i regenerację: sen i odstęp od poprzedniego treningu (kolumna „Przerwa”).");
+    // Po ostatnim treningu jest wpis „ciezar” w decyzje.md: zamiast zastoju pokazuję podjętą decyzję.
+    const head = dec
+      ? `<div class="name">${esc(e.name)} <span class="badge st-old">◆ Decyzja podjęta</span></div>
+        <div class="det">${esc(fmtDate(dec.date))}: ${esc(dec.change)}.</div>
+        <div class="det dim">Wcześniej ${s.unclean} ${plTrening(s.unclean)} z rzędu na ${esc(kg(s.kgNow))} bez czystego ${CFG.sets} × cel.</div>`
+      : `<div class="name">${esc(e.name)} <span class="badge st-stall">■ Zastój</span></div>
+        <div class="det">${s.unclean} ${plTrening(s.unclean)} z rzędu na ${esc(kg(s.kgNow))} bez czystego ${CFG.sets} × cel (cel z dnia treningu).</div>`;
+    const side = dec
+      ? `<b style="color:var(--text-primary)">Powód (decyzje.md)</b><p>${esc(dec.why)}</p>`
+      : `<b style="color:var(--text-primary)">Możliwe przyczyny</b><ul>${hints.map(h => `<li>${esc(h)}</li>`).join("")}</ul>`;
+    return `<div class="plateau">
+      <div>${head}
+        <table><thead><tr><th>Data</th><th>Powtórzenia</th><th>Pozycja</th><th>Przerwa</th><th>RPE</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="adv">${side}</div>
+    </div>`;
+  }).join("");
+  if (!stalls.some(x => !x.dec)) html += `<div class="info"${stalls.length ? ' style="margin-top:12px"' : ""}><span class="ic ok">✓</span><span>${stalls.length
+    ? "Brak innych zastojów" : "Brak zastojów"}: nigdzie ${stalls.length ? "więcej " : ""}nie ma ${CFG.stallSessions} treningów z rzędu na tym samym ciężarze bez czystego ${CFG.sets} × cel.</span></div>`;
+  if (overdue.length) html += `<div class="info" style="margin-top:12px"><span class="ic ok">▲</span><span>Zaległe podniesienia: ${esc(overdue.map(({ e, s }) =>
+    `${short(e.name)} (${s.streak} ${plTrening(s.streak)} czysto na ${kg(s.kgNow)})`).join(", "))}.</span></div>`;
+  if (watch.length) html += `<p class="only-once">Do obserwacji (${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego ${CFG.sets} × cel): ${esc(watch.map(short).join(", "))}.</p>`;
+  $("#plateaus").innerHTML = html;
+}
+
+// ---------- Progres wg rodzin ruchu ----------
+let progressMode = "kg";
+const SERIES_VARS = ["--series-1", "--series-2", "--series-3", "--series-4"];
+const METRIC = {
+  kg: { sub: "Najcięższa seria robocza na każdym treningu. Jedna karta = jeden ruch; każda maszyna ma własną linię, bo ciężarów nie przenosi się między maszynami.",
+    val: x => x.kg, unit: "kg", fmt: v => nf(v, 1) },
+  e1rm: { sub: "Szacowany 1RM (Epley) z najlepszej serii; mniej dokładny powyżej 10 powt. i specyficzny dla maszyny.",
+    val: x => Math.round(x.e1rm * 10) / 10, unit: "kg", fmt: v => nf(v, 1) },
+  rpe: { sub: "Średnie RPE serii roboczych (wspólna skala 6–10). Sygnał pomocniczy: główną daną są wykonane powtórzenia.",
+    val: x => x.rpe == null ? null : Math.round(x.rpe * 10) / 10, unit: "", fmt: v => nf(v, 1), yFixed: [6, 10] },
+};
+
+function moveFamilies() {
+  const map = new Map();
+  for (const e of MODEL.exercises) {
+    if (e.kind !== "weight") continue;
+    const f = familyOf(e.name);
+    if (!map.has(f)) map.set(f, []);
+    map.get(f).push(e);
+  }
+  return [...map].map(([name, list]) => ({
+    name, list: list.sort((a, b) => b.progress.length - a.progress.length || a.name.localeCompare(b.name)),
+    sessions: sum(list, e => e.progress.length),
+  })).sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
+}
+
+const MARK_TYPES = new Set(["ciezar", "kolejnosc", "zasada", "kategoria", "maszyna"]);   // wpisy dla ćwiczeń
+const MARK_TYPES_ALL = new Set(["kategoria", "wyjatek"]);                                 // wpisy dla całego planu (*)
+
+function renderProgress() {
+  const M = METRIC[progressMode];
+  $("#progress-sub").textContent = M.sub + " Pionowa przerywana linia z rombem to wpis z decyzje.md (najedź, by zobaczyć treść); linia przerywana serii to okres niepewny.";
+  const host = $("#multiples");
+  host.innerHTML = "";
+  const fams = moveFamilies();
+  for (const f of fams.filter(f => f.sessions >= 2)) {
+    const series = f.list.slice(0, SERIES_VARS.length).map((e, i) => ({
+      e, name: e.name, color: css(SERIES_VARS[i]), dashed: e.uncertain,
+      points: e.progress.filter(x => M.val(x) != null).map(x => ({
+        d: x.date, v: M.val(x), note: x.note, title: x.workout.title, solo: x.solo,
+        rows: tipRow("Najcięższa seria", `${nf(x.kg, 1)} kg × ${nf(x.reps)}`) +
+          tipRow("Szac. 1RM", kg(Math.round(x.e1rm * 10) / 10)) +
+          (x.rpe != null ? tipRow("Średnie RPE", nf(x.rpe, 1)) : "") +
+          tipRow("Serie robocze", nf(x.sets)),
+      })),
+    })).filter(s => s.points.length);
+    const card = document.createElement("div");
+    card.className = "mini";
+    const single = f.list.length === 1;
+    const line = s => {
+      const p = s.points, a = p[0].v, b = p[p.length - 1].v, d = b - a;
+      const range = p.length > 1 ? `${M.fmt(a)} → ${M.fmt(b)}${M.unit ? " " + M.unit : ""}` : `${M.fmt(a)}${M.unit ? " " + M.unit : ""}`;
+      let delta = "";
+      if (p.length > 1) {
+        const better = progressMode === "rpe" ? d <= -0.3 : d > 0, worse = progressMode === "rpe" ? d >= 0.3 : d < 0;
+        const txt = progressMode === "rpe" ? (better ? "łatwiej" : worse ? "trudniej" : "stabilnie") : "";
+        delta = better ? `<span class="delta-up">${d > 0 ? "▲" : "▼"} ${esc(M.fmt(Math.abs(d)))}${M.unit ? " " + M.unit : ""} ${txt}</span>`
+          : worse ? `<span>${d > 0 ? "▲" : "▼"} ${esc(M.fmt(Math.abs(d)))}${M.unit ? " " + M.unit : ""} ${txt}</span>` : `<span>${progressMode === "rpe" ? "stabilnie" : "bez zmian"}</span>`;
+      }
+      return { range, delta, n: p.length };
+    };
+    let meta;
+    if (!series.length) meta = `<div class="meta"><span>Za mało danych dla tej miary</span></div>`;
+    else if (single) {
+      const l = line(series[0]);
+      meta = `<div class="meta"><span>${l.n} ${plTrening(l.n)} · ${esc(l.range)}</span>${l.delta}</div>`;
+    } else meta = series.map(s => {
+      const l = line(s);
+      const bg = s.dashed ? `repeating-linear-gradient(90deg,${s.color} 0 3px,transparent 3px 5px)` : s.color;
+      return `<div class="meta"><span><span class="sw" style="display:inline-block;width:10px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px;background:${bg}"></span>${esc(s.name)} · ${l.n}× · ${esc(l.range)}</span>${l.delta}</div>`;
+    }).join("");
+    card.innerHTML = `<h3>${esc(single ? f.list[0].name : f.name)}</h3>${meta}<div class="chart"></div>`;
+    host.appendChild(card);
+    // Znaczniki decyzji: wpisy dla ćwiczeń z tej rodziny ruchu oraz wpisy dla całego planu (*) typu kategoria / wyjatek.
+    const markers = DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) : MARK_TYPES.has(d.type) && familyOf(d.ex) === f.name).map(d => ({ d: d.date,
+      html: `<div class="t">${esc(fmtDateLong(d.date))}</div><div class="muted" style="margin-bottom:4px">decyzje.md · ${esc(d.ex === "*" ? "cały plan" : d.ex)}</div>` +
+        `<div><b>${esc(d.type)}</b>: ${esc(d.change)}</div><div class="n">${esc(d.why)}</div>` }));
+    if (series.length) lineChart($(".chart", card), { series, markers, unit: M.unit, fmt: M.fmt, yFixed: M.yFixed || null });
+  }
+  const once = fams.filter(f => f.sessions < 2).flatMap(f => f.list.map(e => e.name));
+  $("#only-once").textContent = once.length ? `Ruchy zrobione tylko raz, więc bez wykresu (są w tabeli rekordów): ${once.join(", ")}.` : "";
+}
+
+// ---------- Grupy mięśniowe ----------
+const MUSCLE_RULES = [
+  [/leg curl|hamstring|romanian|rdl|good morning|nordic/i, "Dwugłowe uda"],
+  [/leg extension|leg press|squat|lunge|hack|step up/i, "Czworogłowe uda"],
+  [/calf/i, "Łydki"],
+  [/hip thrust|glute|abduct|kickback/i, "Pośladki"],
+  [/adduct/i, "Przywodziciele"],
+  [/tricep|pushdown|skull|dip/i, "Triceps"],
+  [/curl/i, "Biceps"],
+  [/lateral raise|shoulder|overhead press|military|arnold|face pull|rear delt|reverse fly|upright row/i, "Barki"],
+  [/row|pulldown|pull ?up|chin ?up|pullover|deadlift|back extension|shrug/i, "Plecy"],
+  [/chest|bench|fly|push ?up|pec deck/i, "Klatka"],
+  [/crunch|knee raise|leg raise|plank|\bab\b|abs|sit ?up|twist|oblique|wheel/i, "Brzuch"],
+];
+const muscleOf = name => (MUSCLE_RULES.find(([re]) => re.test(name)) || [null, "Inne"])[1];
+const RAMP = ["#184f95", "#256abf", "#3987e5", "#6da7ec", "#9ec5f4"];
+const rampIdx = (v, max) => v <= 0 ? -1 : Math.min(4, Math.floor((v / max) * 5 - 1e-9));
+const rampInk = i => i >= 3 ? "#0d0d0d" : "#ffffff";
+
+function renderMuscles() {
+  const wk = weeks(MODEL.workouts);
+  const groups = new Map(), mapping = new Map();
+  wk.forEach((w, i) => {
+    for (const x of w.items) for (const s of x.sets) {
+      // Serie z RPE ≤ CFG.emptySetMaxRpe to wg założeń pusta objętość.
+      if (s.type === "warmup" || MODEL.exByName.get(s.ex).kind === "cardio" || (s.rpe != null && s.rpe <= CFG.emptySetMaxRpe)) continue;
+      const g = muscleOf(s.ex);
+      mapping.set(s.ex, g);
+      if (!groups.has(g)) groups.set(g, new Array(wk.length).fill(0));
+      groups.get(g)[i]++;
+    }
+  });
+  const avg = g => groups.has(g) ? sum(groups.get(g), v => v) / wk.length : 0;
+  const rows = [...groups.keys()].sort((a, b) => avg(b) - avg(a));
+
+  // Ostrzeżenia
+  const warn = [], info = [];
+  const push = avg("Klatka") + avg("Barki") + avg("Triceps"), pull = avg("Plecy") + avg("Biceps");
+  if (push > 0 && pull === 0) warn.push("Brak ćwiczeń ciągnących (plecy, biceps). Dodaj wiosłowanie i ściąganie drążka.");
+  else if (pull > 0 && push / pull > 1.25)
+    warn.push(`Push : pull ≈ ${nf(push / pull, 1)} : 1. Ćwiczenia pchające (klatka, barki, triceps) dostają średnio ${nf(push, 1)} serii/tydz., ciągnące (plecy, biceps) ${nf(pull, 1)}, w tym same plecy tylko ${nf(avg("Plecy"), 1)}. Rotacja rozpiętki / lat pulldown ma to wyrównywać, więc pilnuj naprzemienności. Według założeń objętość zwiększamy dopiero przy zastoju, więc dodatkowe serie pleców to temat na ocenę fazy 1.`);
+  const q = avg("Czworogłowe uda"), h = avg("Dwugłowe uda");
+  if (q > 0 && h === 0) warn.push("Brak ćwiczeń na dwugłowe uda (np. uginanie nóg, martwy ciąg rumuński).");
+  else if (h > 0 && q / h > 2) warn.push(`Czworogłowe dostają ${nf(q / h, 1)}× więcej serii niż dwugłowe uda. Dodaj uginanie nóg lub martwy ciąg rumuński.`);
+  const missing = ["Klatka", "Plecy", "Barki", "Biceps", "Triceps", "Czworogłowe uda", "Dwugłowe uda", "Brzuch"].filter(g => !groups.has(g));
+  if (missing.length) info.push(`Bez bezpośrednich serii: ${missing.join(", ")}.`);
+  const below = rows.filter(g => avg(g) < CFG.weeklySetsBase && g !== "Inne");
+  const emptyWeeks = wk.filter(w => !w.items.length);
+  const emptyNote = emptyWeeks.length ? ` Średnia liczy też ${emptyWeeks.length === 1 ? "pusty tydzień" : "puste tygodnie"} ${emptyWeeks.map(w =>
+    w.start.getMonth() === w.end.getMonth() ? `${w.start.getDate()}–${fmtDate(w.end)}` : `${fmtDate(w.start)} – ${fmtDate(w.end)}`).join(", ")}.` : "";
+  if (below.length) info.push(`Poniżej obecnego poziomu ${CFG.weeklySetsBase} serii/tydz.: ${below.map(g => `${g} (${nf(avg(g), 1)})`).join(", ")}.${emptyNote}`);
+  const empty = MODEL.workouts.flatMap(w => w.sets).filter(s => s.type !== "warmup" && s.rpe != null && s.rpe <= CFG.emptySetMaxRpe).length;
+  if (empty) info.push(`${empty} ${plSerie(empty)} z RPE ≤ ${nf(CFG.emptySetMaxRpe, 1)} nie liczę (pusta objętość wg założeń).`);
+  if (!warn.length) info.unshift("Proporcje między głównymi grupami wyglądają na zrównoważone.");
+  $("#muscle-warn").innerHTML =
+    warn.map(t => `<div class="warn"><span class="ic">⚠</span><span>${esc(t)}</span></div>`).join("") +
+    info.map(t => `<div class="info"><span class="ic">ℹ</span><span>${esc(t)}</span></div>`).join("");
+
+  const [p2lo, p2hi] = CFG.weeklySetsPhase2;
+  const scale = Math.max(p2hi, ...rows.map(avg));
+  const pct = v => (v / scale) * 100;
+  $("#muscle-avg").innerHTML = rows.map(g => `<div class="hbar" title="${esc(g)}: ${esc(nf(avg(g), 1))} serii/tydz.">
+      <span>${esc(g)}</span>
+      <span class="hb-track"><span class="hb-band" style="left:${pct(p2lo)}%;width:${pct(p2hi - p2lo)}%"></span><span class="hb-base" style="left:${pct(CFG.weeklySetsBase)}%"></span><span class="hb-fill" style="width:${pct(avg(g))}%"></span></span>
+      <span class="hb-val">${esc(nf(avg(g), 1))}</span></div>`).join("") +
+    `<div class="hb-legend"><span><i style="width:0;height:12px;border-left:1.5px dashed var(--text-muted)"></i>${CFG.weeklySetsBase} = obecny poziom</span>
+      <span><i style="width:14px;height:10px;background:rgba(255,255,255,0.12);border-radius:2px"></i>${p2lo}–${p2hi} = cel fazy 2</span></div>`;
+
+  const maxCell = Math.max(...rows.flatMap(g => groups.get(g)), 1);
+  $("#muscle-heat").innerHTML = `<thead><tr><th class="rl"></th>${wk.map(w => `<th>${esc(fmtDate(w.start))}</th>`).join("")}<th class="tot">Razem</th></tr></thead>
+    <tbody>${rows.map(g => `<tr><td class="rl">${esc(g)}</td>${groups.get(g).map((v, i) => {
+      const k = rampIdx(v, maxCell);
+      const style = k < 0 ? `background:var(--surface-2);color:var(--text-muted)` : `background:${RAMP[k]};color:${rampInk(k)}`;
+      return `<td class="hc" style="${style}" title="${esc(g)}, tydzień od ${esc(fmtDate(wk[i].start))}: ${v} serii">${v || "·"}</td>`;
+    }).join("")}<td class="tot">${sum(groups.get(g), v => v)}</td></tr>`).join("")}</tbody>`;
+
+  const byGroup = new Map();
+  for (const [ex, g] of mapping) { if (!byGroup.has(g)) byGroup.set(g, []); byGroup.get(g).push(ex); }
+  $("#muscle-map").innerHTML = rows.map(g => `<div><b style="color:var(--text-primary)">${esc(g)}:</b> ${esc(byGroup.get(g).sort().join(", "))}</div>`).join("");
+}
+
+// ---------- Czas i gęstość ----------
+function renderTempo() {
+  const ws = MODEL.workouts.filter(w => w.minutes);
+  if (!ws.length) { $("#duration").textContent = $("#density").textContent = "Brak danych o czasie treningów."; return; }
+  const wTip = (w, main) => `<div class="t">${esc(w.title)}</div>
+    <div class="muted" style="margin-bottom:4px">${esc(fmtDateLong(w.start))}, ${esc(fmtTime(w.start))}</div>
+    ${main}
+    ${tipRow("Objętość", kg(Math.round(w.volume)))}
+    ${tipRow("Serie robocze", nf(w.workingSets))}`;
+  barChart($("#duration"), {
+    labels: ws.map(w => fmtDate(w.start)), values: ws.map(w => Math.round(w.minutes)),
+    refs: [{ v: Math.round(mean(ws.map(w => w.minutes))), label: `średnio ${nf(Math.round(mean(ws.map(w => w.minutes))))} min` }],
+    band: [CFG.durationBand[0], CFG.durationBand[1], `cel ${CFG.durationBand[0]}–${CFG.durationBand[1]} min`],
+    fmt: v => nf(v) + " min", axisFmt: v => nf(v), height: 200,
+    tips: ws.map(w => wTip(w, tipRow("Czas trwania", fmtDur(w.minutes), css("--series-1")) + tipRow("Gęstość", nf(w.volume / w.minutes) + " kg/min"))),
+  });
+  barChart($("#density"), {
+    labels: ws.map(w => fmtDate(w.start)), values: ws.map(w => Math.round(w.volume / w.minutes)),
+    refs: [{ v: Math.round(sum(ws, w => w.volume) / sum(ws, w => w.minutes)), label: `średnio ${nf(Math.round(sum(ws, w => w.volume) / sum(ws, w => w.minutes)))} kg/min` }],
+    fmt: v => nf(v) + " kg/min", axisFmt: v => nf(v), height: 200,
+    tips: ws.map(w => wTip(w, tipRow("Gęstość", nf(w.volume / w.minutes) + " kg/min", css("--series-1")) + tipRow("Czas trwania", fmtDur(w.minutes)))),
+  });
+}
+
+// ---------- Kalendarz ----------
+const WD_SHORT = ["pn", "wt", "śr", "cz", "pt", "sb", "nd"];
+const WD_LONG = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"];
+const plDni = n => n === 1 ? "dzień" : "dni";
+
+function renderCalendar() {
+  const ws = MODEL.workouts;
+  const key = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const byDay = new Map();
+  for (const w of ws) { const k = key(w.start); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(w); }
+  const today = midnight(new Date());
+  const lastDay = midnight(ws[ws.length - 1].start);
+  const sinceLast = dayDiff(lastDay, today);
+  const end = sinceLast > 0 && sinceLast <= 56 ? today : lastDay;
+  const start = weekStart(ws[0].start);
+  const nW = dayDiff(start, weekStart(end)) / 7 + 1;
+  const maxVol = Math.max(...[...byDay.values()].map(a => sum(a, w => w.volume)), 1);
+
+  const cal = $("#calendar");
+  cal.style.gridTemplateColumns = `22px repeat(${nW}, 24px)`;
+  let html = `<div></div>`;
+  for (let i = 0; i < nW; i++) {
+    const d = addDays(start, i * 7), prev = addDays(start, (i - 1) * 7);
+    html += `<div class="ml">${i === 0 || d.getMonth() !== prev.getMonth() ? esc(d.toLocaleDateString("pl-PL", { month: "short" })) : ""}</div>`;
+  }
+  const cells = [];
+  for (let r = 0; r < 7; r++) {
+    html += `<div class="dl">${WD_SHORT[r]}</div>`;
+    for (let i = 0; i < nW; i++) {
+      const d = addDays(start, i * 7 + r);
+      const items = byDay.get(key(d)) || [];
+      if (d > end) { html += `<div class="cd future"></div>`; continue; }
+      const vol = sum(items, w => w.volume);
+      const k = items.length ? Math.max(0, rampIdx(vol, maxVol)) : -1;
+      const style = k >= 0 ? ` style="background:${RAMP[k]};color:${rampInk(k)}"` : "";
+      cells.push({ d, items, vol });
+      html += `<div class="cd${items.length ? " w" : ""}" data-i="${cells.length - 1}"${style}>${d.getDate()}</div>`;
+    }
+  }
+  cal.innerHTML = html;
+  cal.querySelectorAll(".cd[data-i]").forEach(el => {
+    const c = cells[+el.dataset.i];
+    el.addEventListener("pointermove", ev => showTip(`<div class="t">${esc(fmtDateLong(c.d))}</div>` + (c.items.length
+      ? c.items.map(w => `<div class="muted" style="margin-top:4px">${esc(w.title)} · ${esc(fmtTime(w.start))}</div>
+          ${tipRow("Objętość", kg(Math.round(w.volume)))}${w.minutes ? tipRow("Czas", fmtDur(w.minutes)) : ""}
+          <div class="muted" style="white-space:normal">${esc([...new Set(w.sets.map(s => s.ex))].join(", "))}</div>`).join("")
+      : `<div class="muted">Dzień bez treningu</div>`), ev));
+    el.addEventListener("pointerleave", hideTip);
+  });
+  $("#cal-legend").innerHTML = `<i style="background:var(--surface-2)"></i>&nbsp;brak&nbsp;&nbsp; mniej ${RAMP.map(c => `<i style="background:${c}"></i>`).join("")} więcej objętości`;
+
+  // Statystyki
+  const days = [...new Set(ws.map(w => +midnight(w.start)))].map(t => new Date(t));
+  const gaps = days.slice(1).map((d, i) => ({ n: dayDiff(days[i], d), from: days[i], to: d }));
+  const maxGap = gaps.reduce((b, g) => g.n > b.n ? g : b, { n: 0 });
+  const wd = new Array(7).fill(0);
+  ws.forEach(w => wd[(w.start.getDay() + 6) % 7]++);
+  const top = Math.max(...wd);
+  const pora = { rano: 0, "w ciągu dnia": 0, wieczór: 0, noc: 0 };
+  ws.forEach(w => { const h = w.start.getHours(); pora[h >= 5 && h < 11 ? "rano" : h >= 11 && h < 17 ? "w ciągu dnia" : h >= 17 && h < 21 ? "wieczór" : "noc"]++; });
+  // Za krótka przerwa: między dniami treningowymi mniej niż CFG.minRestDays dni wolnych.
+  const b2b = gaps.filter(g => g.n - 1 < CFG.minRestDays);
+  const over = weeks(ws).filter(w => w.items.length > CFG.maxPerWeek);
+  const minRest = `min. ${CFG.minRestDays} ${plDni(CFG.minRestDays)} przerwy`;
+  const stats = [
+    [CFG.minRestDays === 1 ? "Treningi dzień po dniu" : "Za krótka przerwa", b2b.length ? `⚠ ${b2b.length}×` : "✓ 0",
+      b2b.length ? b2b.map(g => `${fmtDate(g.from)} → ${fmtDate(g.to)}`).join(", ") + ` (założenie: ${minRest})` : `zawsze ${minRest}`],
+    [`Tygodnie z > ${CFG.maxPerWeek} treningami`, over.length ? `⚠ ${over.length}` : "✓ 0",
+      over.length ? over.map(w => `tydz. od ${fmtDate(w.start)}: ${w.items.length}`).join(", ") : `zgodnie z limitem ${CFG.maxPerWeek} / tydz.`],
+    sinceLast >= 0 ? ["Od ostatniego treningu", sinceLast === 0 ? "dziś" : `${sinceLast} ${plDni(sinceLast)}`, fmtDateLong(lastDay)] : null,
+    gaps.length ? ["Średni odstęp", `${nf(mean(gaps.map(g => g.n)), 1)} dnia`, "między kolejnymi dniami treningowymi"] : null,
+    maxGap.n ? ["Najdłuższa przerwa", `${maxGap.n} ${plDni(maxGap.n)}`, `${fmtDate(maxGap.from)} → ${fmtDate(maxGap.to)}`] : null,
+    ["Najczęściej trenujesz", WD_LONG.filter((_, i) => wd[i] === top).join(", "), WD_SHORT.map((s, i) => `${s} ${wd[i]}`).join(" · ")],
+    ["Pora dnia", Object.entries(pora).sort((a, b) => b[1] - a[1])[0][0], Object.entries(pora).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(" · ")],
+  ].filter(Boolean);
+  $("#cal-stats").innerHTML = stats.map(([l, v, n]) =>
+    `<div class="stat"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="note">${esc(n)}</div></div>`).join("");
+}
+
+function renderWeekly() {
+  const wk = weeks(MODEL.workouts);
+  const today = new Date();
+  barChart($("#weekly"), {
+    labels: wk.map(w => fmtDate(w.start)),
+    values: wk.map(w => w.items.length),
+    valueLabels: true, axis: false, height: 220,
+    refs: [{ v: CFG.maxPerWeek, label: `maks. ${CFG.maxPerWeek}` }],
+    tips: wk.map(w => {
+      const range = w.start.getMonth() === w.end.getMonth() ? `${w.start.getDate()}–${fmtDate(w.end)}` : `${fmtDate(w.start)} – ${fmtDate(w.end)}`;
+      const ongoing = today >= w.start && today < new Date(w.end.getFullYear(), w.end.getMonth(), w.end.getDate() + 1);
+      const b2b = w.items.slice(1).filter((x, i) => dayDiff(w.items[i].start, x.start) - 1 < CFG.minRestDays).length;
+      return `<div class="t">Tydzień ${esc(range)}${ongoing ? " <span class='muted'>(w trakcie)</span>" : ""}</div>
+        ${tipRow("Treningi", nf(w.items.length))}
+        ${w.items.length > CFG.maxPerWeek ? `<div class="n" style="color:var(--warning);font-style:normal">⚠ powyżej założonych ${CFG.maxPerWeek} treningów</div>` : ""}
+        ${b2b ? `<div class="n" style="color:var(--warning);font-style:normal">⚠ trening dzień po dniu (bez dnia przerwy)</div>` : ""}
+        ${w.items.length ? tipRow("Objętość", kg(sum(w.items, x => x.volume))) : ""}
+        ${w.items.map(x => `<div class="muted">${esc(fmtDate(x.start))} · ${esc(x.title)}</div>`).join("")}`;
+    }),
+  });
+}
+
+function renderVolume() {
+  const ws = MODEL.workouts;
+  barChart($("#volume"), {
+    labels: ws.map(w => fmtDate(w.start)),
+    values: ws.map(w => Math.round(w.volume)),
+    refs: [{ v: Math.round(sum(ws, w => w.volume) / ws.length), label: `średnio ${kg(Math.round(sum(ws, w => w.volume) / ws.length))}` }],
+    fmt: v => nf(v) + (v ? " kg" : ""),
+    height: 220,
+    tips: ws.map(w => `<div class="t">${esc(w.title)}</div>
+      <div class="muted" style="margin-bottom:4px">${esc(fmtDateLong(w.start))}, ${esc(fmtTime(w.start))}</div>
+      ${tipRow("Objętość", kg(Math.round(w.volume)), css("--series-1"))}
+      ${w.minutes ? tipRow("Czas trwania", fmtDur(w.minutes)) : ""}
+      ${tipRow("Serie robocze", nf(w.workingSets))}
+      ${tipRow("Ćwiczenia", nf(w.exerciseCount))}`),
+  });
+}
+
+let sortKey = "sessions", sortDir = -1;
+const COLS = [
+  { key: "fam", label: "Ruch", val: e => familyOf(e.name) },
+  { key: "name", label: "Ćwiczenie", val: e => e.name },
+  { key: "sessions", label: "Treningi", num: true, val: e => e.sessions },
+  { key: "max", label: "Max ciężar", num: true, val: e => e.kind === "weight" ? e.maxSet.kg * 1000 + e.maxSet.reps : -1 },
+  { key: "maxDate", label: "Data rekordu", val: e => e.kind === "weight" ? +e.maxSet.workout.start : -1 },
+  { key: "e1rm", label: "Szac. 1RM", num: true, val: e => e.kind === "weight" ? e1rm(e.e1rmSet) : -1 },
+  { key: "best", label: "Najlepsza seria", num: true, val: e => e.kind === "weight" ? e.sortBest : -1 + e.sortBest / 1e6 },
+  { key: "delta", label: "Postęp", num: true, val: e => e.delta ?? -1e9 },
+];
+
+function cell(e, key) {
+  const dash = `<span class="dim">—</span>`;
+  switch (key) {
+    case "fam": return familyOf(e.name) === e.name ? `<span class="dim">—</span>` : esc(familyOf(e.name));
+    case "name": return esc(e.name) + (e.kind === "reps" ? `<span class="tag">masa ciała</span>` : e.kind === "cardio" ? `<span class="tag">cardio</span>` : "");
+    case "sessions": return nf(e.sessions);
+    case "max": return e.kind === "weight" ? `<b>${esc(kg(e.maxSet.kg))}</b> <span class="dim">× ${nf(e.maxSet.reps)}</span>` : dash;
+    case "maxDate": return e.kind === "weight" ? esc(fmtDate(e.maxSet.workout.start)) : dash;
+    case "e1rm": return e.kind === "weight" ? esc(kg(Math.round(e1rm(e.e1rmSet) * 10) / 10)) : dash;
+    case "best":
+      if (e.kind === "weight") return `${esc(nf(e.volSet.kg, 1))} × ${nf(e.volSet.reps)} <span class="dim">= ${esc(kg(e.volSet.kg * e.volSet.reps))}</span>`;
+      if (e.kind === "reps") return `${nf(e.repsSet.reps)} powt. <span class="dim">${esc(fmtDate(e.repsSet.workout.start))}</span>`;
+      return [e.secSet.sec ? fmtDur(e.secSet.sec / 60) : "", e.kmMax ? nf(e.kmMax, 2) + " km" : ""].filter(Boolean).join(" · ") || dash;
+    case "delta":
+      if (e.delta == null) return dash;
+      return e.delta > 0 ? `<span class="delta-up">▲ ${esc(kg(e.delta))}</span>` : e.delta < 0 ? `▼ ${esc(kg(-e.delta))}` : `<span class="dim">bez zmian</span>`;
+  }
+}
+
+function renderRecords() {
+  const col = COLS.find(c => c.key === sortKey);
+  const rows = [...MODEL.exercises].sort((a, b) => {
+    const va = col.val(a), vb = col.val(b);
+    return (typeof va === "string" ? va.localeCompare(vb) : va - vb) * sortDir || a.name.localeCompare(b.name);
+  });
+  const t = $("#records");
+  t.innerHTML = `<thead><tr>${COLS.map(c =>
+    `<th data-key="${c.key}" class="${c.num ? "num" : ""}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${esc(c.label)}<span class="arrow">${c.key === sortKey ? (sortDir > 0 ? "▲" : "▼") : ""}</span></th>`).join("")}</tr></thead>
+    <tbody>${rows.map(e => `<tr>${COLS.map(c => `<td class="${c.num ? "num" : ""}">${cell(e, c.key)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  t.querySelectorAll("th").forEach(th => th.addEventListener("click", () => {
+    const k = th.dataset.key;
+    sortDir = k === sortKey ? -sortDir : (k === "name" ? 1 : -1);
+    sortKey = k;
+    renderRecords();
+  }));
+}
+
+function renderCharts() { renderProgress(); renderWeekly(); renderVolume(); renderTempo(); }
+function render() { renderKPIs(); renderSignals(); renderOrder(); renderPlateaus(); renderCharts(); renderMuscles(); renderCalendar(); renderRecords(); }
+
+function load(text) {
+  const model = buildModel(parseCSV(text));
+  if (!model.workouts.length) throw new Error("Nie znalazłem w pliku żadnych treningów. Czy to eksport z Hevy?");
+  MODEL = model;
+  $("#error").hidden = true;
+  render();
+}
+
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+  progressMode = b.dataset.mode;
+  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
+  if (MODEL) renderProgress();
+}));
+$("#file").addEventListener("change", ev => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try { load(reader.result); }
+    catch (err) { $("#error").textContent = err.message; $("#error").hidden = false; }
+  };
+  reader.readAsText(f, "utf-8");
+  ev.target.value = "";
+});
+let resizeTimer, lastW = innerWidth;
+addEventListener("resize", () => {
+  if (innerWidth === lastW) return;
+  lastW = innerWidth;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => MODEL && renderCharts(), 150);
+});
+
+try { load($("#csv-data").textContent.trim()); }
+catch (err) { $("#error").textContent = "Błąd wczytywania danych: " + err.message; $("#error").hidden = false; }
+</script>
+</body>
+</html>
