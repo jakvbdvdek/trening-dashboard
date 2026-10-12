@@ -229,6 +229,40 @@ details summary { list-style: none; }
 
 footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
 
+/* Menu skoków do sekcji: przyklejone u góry, jeden pasek przewijany w poziomie (strona nie przewija się w poziomie).
+   scroll-padding-top = wysokość menu (--nav-h, mierzona w skrypcie), więc menu nie zasłania nagłówka po skoku. */
+html { scroll-padding-top: calc(var(--nav-h, 56px) + 12px); }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+nav.jump { position: sticky; top: 0; z-index: 5; background: var(--page); margin: 0 -16px 16px; padding: 2px 12px; border-bottom: 1px solid var(--grid); }
+nav.jump ul { display: flex; gap: 4px; list-style: none; margin: 0; padding: 4px; overflow-x: auto; scrollbar-width: thin; }
+nav.jump li { flex: none; }
+nav.jump a { display: flex; align-items: center; min-height: 44px; padding: 8px 12px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; white-space: nowrap; font-size: 15px; }
+nav.jump a:hover { color: var(--text-primary); background: var(--surface-2); }
+nav.jump a[aria-current="true"] { background: #dcdacf; color: #0d0d0d; font-weight: 600; }
+@media (max-width: 480px) { nav.jump { margin: 0 -12px 12px; padding: 2px 8px; } }
+
+/* Rozwijane elementy (Jak to czytać?, Rzadkie ćwiczenia): przycisk z aria-expanded, cel ≥ 44 px. */
+.disc { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; border-radius: 4px;
+  color: var(--text-secondary); font-size: 15px; cursor: pointer; }
+.disc::before { content: "▸" / ""; }
+.disc[aria-expanded="true"]::before { content: "▾" / ""; }
+.disc:hover { color: var(--text-primary); text-decoration: underline; }
+.disc:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.card-head .disc { margin: 2px 0 -8px -4px; }
+.help { background: var(--surface-2); border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; color: var(--text-secondary); font-size: 15px; }
+.help p { margin: 0 0 6px; }
+.help p:last-child { margin-bottom: 0; }
+.help ul { margin: 0 0 6px; padding-left: 18px; }
+.help b { color: var(--text-primary); font-weight: 600; }
+.more { margin-top: 12px; }
+.vh { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Podsumowanie zgodności z zasadami kolejności. */
+.order-sum { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 6px 16px; margin: 0 0 12px; padding: 0; list-style: none; font-size: 15px; }
+.order-sum li { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--grid); padding: 3px 0; }
+.order-sum .lbl { color: var(--text-secondary); }
+.order-sum b { font-variant-numeric: tabular-nums; }
+.rare-note { color: var(--text-muted); font-size: 14px; margin: 4px 0 8px; }
+
 #tip {
   position: fixed; z-index: 10; pointer-events: none; max-width: min(300px, calc(100vw - 16px));
   background: #2a2a28; color: var(--text-primary); border: 1px solid var(--control-border);
@@ -258,13 +292,29 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
   </header>
   <p id="error" hidden></p>
 
+  <nav class="jump" aria-label="Sekcje">
+    <ul>
+      <li><a href="#sygnaly">Sygnały</a></li>
+      <li><a href="#zastoje">Zastoje</a></li>
+      <li><a href="#progres">Progres</a></li>
+      <li><a href="#tygodnie">Tygodnie</a></li>
+      <li><a href="#objetosc">Objętość</a></li>
+      <li><a href="#miesnie">Grupy mięśniowe</a></li>
+      <li><a href="#czas">Czas i gęstość</a></li>
+      <li><a href="#kalendarz">Kalendarz</a></li>
+      <li><a href="#kolejnosc">Kolejność</a></li>
+      <li><a href="#rekordy">Rekordy</a></li>
+    </ul>
+  </nav>
+
   <div class="kpis" id="kpis"></div>
 
-  <section class="card">
+  <section class="card" id="sygnaly">
     <div class="card-head">
       <div>
         <h2>Sygnały z danych</h2>
-        <p>Sygnały są materiałem do decyzji, nie planem. Plan treningu powstaje poza dashboardem; świadome decyzje zapisuj w decyzje.md.</p>
+        <p>Materiał do decyzji, nie plan.</p>
+        <button type="button" class="disc" aria-expanded="false" aria-controls="help-signals">Jak to czytać?</button>
       </div>
       <div class="legend">
         <span class="badge st-up">▲ Czysto ×2 / cel przekroczony</span>
@@ -277,26 +327,32 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
         <span class="badge st-down">↘ Zejście w trakcie</span>
       </div>
     </div>
+    <div class="help" id="help-signals" hidden>
+      <p>Plan treningu powstaje poza dashboardem; świadome decyzje zapisuj w decyzje.md.</p>
+      <p id="signals-rules"></p>
+    </div>
     <div id="signals-warn"></div>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela sygnałów"><table id="plan"></table></div>
-    <p class="only-once" id="signals-rules"></p>
   </section>
 
-  <section class="card">
+  <section class="card" id="zastoje">
     <div class="card-head">
       <div>
         <h2>Zastoje i zaległe podniesienia</h2>
-        <p>Zastój = 3 treningi z rzędu na tym samym ciężarze bez czystego 3 × cel. Najpierw szukamy przyczyny, potem zmieniamy ciężar lub objętość.</p>
+        <p>Ciężary, na których wynik stoi albo czeka na podniesienie.</p>
+        <button type="button" class="disc" aria-expanded="false" aria-controls="help-plateaus">Jak to czytać?</button>
       </div>
     </div>
+    <div class="help" id="help-plateaus" hidden></div>
     <div id="plateaus"></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="progres">
     <div class="card-head">
       <div>
         <h2>Progres</h2>
-        <p id="progress-sub"></p>
+        <p>Jedna karta = jeden ruch; każda maszyna ma własną linię.</p>
+        <button type="button" class="disc" aria-expanded="false" aria-controls="help-progress">Jak to czytać?</button>
       </div>
       <div class="legend">
         <div class="seg" role="group" aria-label="Co pokazać na wykresach">
@@ -307,12 +363,13 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
         <span><span class="ring"></span>trening z notatką</span>
       </div>
     </div>
+    <div class="help" id="help-progress" hidden><p id="progress-sub"></p></div>
     <div class="multiples" id="multiples"></div>
     <p class="only-once" id="only-once"></p>
   </section>
 
   <div class="row2">
-    <section class="card">
+    <section class="card" id="tygodnie">
       <div class="card-head">
         <div>
           <h2>Treningi w tygodniu</h2>
@@ -321,7 +378,7 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
       </div>
       <div class="chart" id="weekly"></div>
     </section>
-    <section class="card">
+    <section class="card" id="objetosc">
       <div class="card-head">
         <div>
           <h2>Objętość na trening</h2>
@@ -332,7 +389,7 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
     </section>
   </div>
 
-  <section class="card">
+  <section class="card" id="miesnie">
     <div class="card-head">
       <div>
         <h2>Serie na grupę mięśniową</h2>
@@ -347,7 +404,7 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
     <details><summary>Jak przypisałem ćwiczenia do grup</summary><div class="map-list" id="muscle-map"></div></details>
   </section>
 
-  <div class="row2 even">
+  <div class="row2 even" id="czas">
     <section class="card">
       <div class="card-head">
         <div>
@@ -368,7 +425,7 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
     </section>
   </div>
 
-  <section class="card">
+  <section class="card" id="kalendarz">
     <div class="card-head">
       <div>
         <h2>Kalendarz aktywności</h2>
@@ -381,29 +438,37 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="kolejnosc">
     <div class="card-head">
       <div>
         <h2>Kontrola kolejności i zasad</h2>
-        <p>Leg press pierwszy, shoulder press pierwszy w bloku góry, złożone przed izolacją, brzuch na końcu, nic nie pominięte, rozgrzewki, bez upadku w złożonych</p>
+        <p>Czy treningi trzymały się zasad kolejności i wykonania.</p>
+        <button type="button" class="disc" aria-expanded="false" aria-controls="help-order">Jak to czytać?</button>
       </div>
     </div>
+    <div class="help" id="help-order" hidden></div>
+    <ul class="order-sum" id="order-sum" aria-label="Zgodność z zasadami"></ul>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela kontroli kolejności"><table id="order"></table></div>
-    <p class="only-once">Plan ustalał się stopniowo, więc starsze treningi mogą nie spełniać części zasad.</p>
+    <div class="more" id="order-more"></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="rekordy">
     <div class="card-head">
       <div>
         <h2>Rekordy</h2>
         <p>Kliknij nagłówek kolumny, żeby posortować</p>
+        <button type="button" class="disc" aria-expanded="false" aria-controls="help-records">Jak to czytać?</button>
       </div>
     </div>
+    <div class="help" id="help-records" hidden>
+      <p>Szacowany 1RM liczony wzorem Epleya: ciężar × (1 + powtórzenia / 30). Serie rozgrzewkowe nie są wliczane do rekordów ani objętości.</p>
+      <p id="rare-rule"></p>
+    </div>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela rekordów"><table id="records" class="sticky-first"></table></div>
+    <div class="more" id="records-more"></div>
   </section>
 
   <footer>
-    Szacowany 1RM liczony wzorem Epleya: ciężar × (1 + powtórzenia / 30). Serie rozgrzewkowe nie są wliczane do rekordów ani objętości.
     Ćwiczenia bez obciążenia (np. z masą ciała) i cardio nie wchodzą do objętości.
     Progi i zasady pochodzą z pliku zalozenia_treningowe.md (obiekty CFG, PLAN i FAMILIES na początku skryptu) i są wskazówką, nie sztywnym limitem.
     <span id="merged"></span>
@@ -771,6 +836,11 @@ const CFG = {
   cleanMaxRpe: 9.5,        // czysta seria: bez upadku i RPE najwyżej tyle (czyli < 10)
   emptySetMaxRpe: 6,       // pusta objętość: seria z RPE najwyżej tyle nie liczy się do objętości
   signalsActiveDays: 21,   // sygnały tylko dla maszyn używanych w tylu ostatnich dniach (licząc od najnowszego treningu)
+  // Rekordy: ćwiczenie z najwyżej tyloma treningami, którego ostatni trening był ponad rareStaleDays dni przed
+  // najnowszym treningiem w danych, trafia do zwiniętej grupy „Rzadkie ćwiczenia” (tylko widok, bez wpływu na liczenie).
+  rareMaxSessions: 2,
+  rareStaleDays: 14,
+  orderRecent: 4,          // kontrola kolejności: tyle ostatnich treningów widać od razu, starsze pod przyciskiem
   maxPerWeek: 3,           // maks. treningów w tygodniu
   minRestDays: 1,          // minimum dni przerwy między treningami
   // Kontrola maszyny przypisanej domyślnie (brak słowa maszyny w notatce, np. chest press → talerze):
@@ -1114,7 +1184,28 @@ const seriesIcon = (shape, color, dashed) => `<svg width="22" height="12" viewBo
   `<line x1="1" y1="6" x2="21" y2="6" stroke="${color}" stroke-width="2"${dashed ? ` stroke-dasharray="4 3"` : ""}/>` +
   `<path d="${shapePath(shape, 11, 6, 3.6)}" fill="${color}"/></svg>`;
 // Na ekranach dotykowych dymek zostaje po stuknięciu; znika po stuknięciu poza wykresem / kalendarzem.
-document.addEventListener("pointerdown", e => { if (!e.target.closest || !e.target.closest(".chart svg, .cd")) hideTip(); });
+document.addEventListener("pointerdown", e => { if (!e.target.closest || !e.target.closest(".chart svg, .cd, [data-tip]")) hideTip(); });
+// Krótkie dymki przy elementach z data-tip (np. „przed wprowadzeniem zasady”); ten sam tekst jest w ukrytym opisie dla czytnika ekranu.
+const onDataTip = e => { const t = e.target.closest && e.target.closest("[data-tip]"); if (t) showTip(`<div>${esc(t.dataset.tip)}</div>`, e); };
+document.addEventListener("pointerover", e => { if (e.pointerType === "mouse") onDataTip(e); });
+document.addEventListener("pointerdown", onDataTip);
+document.addEventListener("pointerout", e => { if (e.pointerType === "mouse" && e.target.closest && e.target.closest("[data-tip]")) hideTip(); });
+
+// Rozwijane elementy: przycisk z aria-expanded i aria-controls przełącza widoczność wskazanego elementu.
+// Stan zapamiętany w OPEN, więc zostaje po ponownym renderowaniu (np. po wczytaniu nowego CSV).
+const OPEN = new Set();
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("button[aria-controls][aria-expanded]");
+  if (!b) return;
+  const id = b.getAttribute("aria-controls"), open = b.getAttribute("aria-expanded") !== "true";
+  if (open) OPEN.add(id); else OPEN.delete(id);
+  b.setAttribute("aria-expanded", String(open));
+  document.getElementById(id).hidden = !open;
+  if (b.dataset.closed) b.textContent = open ? b.dataset.open : b.dataset.closed;
+});
+// Przycisk rozwijający (HTML) ze stanem z OPEN; `open` / `closed`: etykiety zależne od stanu (opcjonalnie).
+const toggleBtn = (id, cls, closed, open = closed) => `<button type="button" class="${cls}" aria-controls="${id}" aria-expanded="${OPEN.has(id)}"` +
+  (open !== closed ? ` data-closed="${esc(closed)}" data-open="${esc(open)}"` : "") + `>${esc(OPEN.has(id) ? open : closed)}</button>`;
 
 // series: [{ name, color, dashed, shape, points: [{ d, v, rows, note, title }] }]; każda seria ma własne daty.
 // markers: [{ d, html }] — wpisy z decyzje.md, rysowane jako pionowa przerywana linia z rombem.
@@ -1559,20 +1650,57 @@ function stackLabels(table, leadIdx) {
   }));
 }
 
+// Data wprowadzenia stałej pozycji z PLAN (`fixed`): najwcześniejszy wpis „kolejnosc” w decyzje.md dla tej rodziny ruchu.
+// Brak wpisu = data nieznana, zasada oceniana dla wszystkich treningów.
+const ruleFrom = kind => (DECISIONS.filter(d => d.type === "kolejnosc" && familyOf(d.ex) === fixedFam(kind)).sort((a, b) => a.date - b.date)[0] || {}).date || null;
+// Kolumny kontroli kolejności; `from`: data wprowadzenia zasady (treningi wcześniejsze nie są oceniane przy tej zasadzie).
+const ORDER_RULES = () => [
+  { key: "leg", label: "Leg press 1.", from: ruleFrom("first") },
+  { key: "shoulder", label: "Shoulder press 1. w górze", from: ruleFrom("firstUpper") },
+  { key: "comp", label: "Złożone przed izolacją" },
+  { key: "abs", label: "Brzuch na końcu" },
+  { key: "missing", label: "Pominięte" },
+  { key: "warm", label: "Rozgrzewka" },
+  { key: "fail", label: "Bez upadku w złożonych" },
+];
+
 function renderOrder() {
-  const ws = MODEL.workouts;
-  const cell = c => c.st === "ok" ? `<span class="ok">✓</span>` : c.st === "na" ? `<span class="na">${esc(c.t)}</span>` : `<span class="bad">✗ ${esc(c.t)}</span>`;
-  const rows = ws.map((w, i) => ({ w, r: orderCheck(w, ws[i - 1]) })).reverse();
+  const ws = MODEL.workouts, rules = ORDER_RULES();
+  // Ocena z orderCheck bez zmian; trening sprzed daty wprowadzenia zasady dostaje przy niej neutralne „—” (st: "pre").
+  const rows = ws.map((w, i) => {
+    const r = orderCheck(w, ws[i - 1]);
+    return { w, c: rules.map(rl => rl.from && w.start < rl.from ? { st: "pre", t: `Przed wprowadzeniem zasady (od ${fmtDate(rl.from)}, decyzje.md)` } : r[rl.key]) };
+  }).reverse();
+  const cell = c => c.st === "ok" ? `<span class="ok">✓</span>` : c.st === "na" ? `<span class="na">${esc(c.t)}</span>`
+    : c.st === "pre" ? `<span class="na" data-tip="${esc(c.t)}">—<span class="vh"> ${esc(c.t.toLowerCase())}</span></span>` : `<span class="bad">✗ ${esc(c.t)}</span>`;
+  const tr = ({ w, c }) => {
+    const v = variantOf(w);
+    return `<tr><td class="nw">${esc(fmtDate(w.start))}<div class="why">${esc(w.title)}</div></td>
+      <td class="nw">${v ? "FBW_" + v : `<span class="na">–</span>`}</td>
+      ${c.map(x => `<td>${cell(x)}</td>`).join("")}</tr>`;
+  };
+  const recent = rows.slice(0, CFG.orderRecent), older = rows.slice(CFG.orderRecent);
   $("#order").className = "order stack";
-  $("#order").innerHTML = `<thead><tr><th>Trening</th><th>Wariant</th><th>Leg press 1.</th><th>Shoulder press 1. w górze</th><th>Złożone przed izolacją</th>
-      <th>Brzuch na końcu</th><th>Pominięte</th><th>Rozgrzewka</th><th>Bez upadku w złożonych</th></tr></thead>
-    <tbody>${rows.map(({ w, r }) => {
-      const v = variantOf(w);
-      return `<tr><td class="nw">${esc(fmtDate(w.start))}<div class="why">${esc(w.title)}</div></td>
-        <td class="nw">${v ? "FBW_" + v : `<span class="na">–</span>`}</td>
-        ${[r.leg, r.shoulder, r.comp, r.abs, r.missing, r.warm, r.fail].map(c => `<td>${cell(c)}</td>`).join("")}</tr>`;
-    }).join("")}</tbody>`;
+  $("#order").innerHTML = `<thead><tr><th>Trening</th><th>Wariant</th>${rules.map(rl => `<th>${esc(rl.label)}</th>`).join("")}</tr></thead>
+    <tbody>${recent.map(tr).join("")}</tbody>` +
+    (older.length ? `<tbody id="order-older"${OPEN.has("order-older") ? "" : " hidden"}>${older.map(tr).join("")}</tbody>` : "");
   stackLabels($("#order"), 0);
+  $("#order-more").innerHTML = older.length ? toggleBtn("order-older", "btn", `Pokaż starsze (${older.length})`, `Ukryj starsze (${older.length})`) : "";
+
+  // Zgodność we wszystkich treningach (także schowanych): ✓ wśród ocenionych; bez „—” sprzed zasady i bez ocen neutralnych.
+  $("#order-sum").innerHTML = rules.map((rl, k) => {
+    const ok = rows.filter(x => x.c[k].st === "ok").length, n = rows.filter(x => x.c[k].st === "ok" || x.c[k].st === "bad").length;
+    return `<li><span class="lbl">${esc(rl.label)}${rl.from ? ` <span class="dim">(od ${esc(fmtDate(rl.from))})</span>` : ""}</span>` +
+      `<b>${n ? `${ok}/${n}` : "—"}</b></li>`;
+  }).join("");
+  const dated = rules.filter(rl => rl.from), undated = rules.filter(rl => !rl.from);
+  $("#help-order").innerHTML = `<p>Zasady z założeń: leg press pierwszy, shoulder press pierwszy w bloku góry, złożone przed izolacją, brzuch na końcu,
+      nic nie pominięte, rozgrzewki przed ciężkimi ćwiczeniami, bez upadku w ćwiczeniach złożonych. ✓ = zgodnie, ✗ = niezgodnie (z powodem), szary tekst = nie dotyczy.</p>
+    <p>Plan ustalał się stopniowo. ${dated.length ? `Dla zasad z datą wprowadzenia w decyzje.md (${dated.map(rl => `${esc(rl.label.toLowerCase())}: od ${esc(fmtDate(rl.from))}`).join("; ")})
+      treningi wcześniejsze mają szare „—” i nie liczą się do podsumowania zgodności. ` : ""}${undated.length ? `Pozostałe zasady nie mają daty wprowadzenia,
+      więc oceniam wszystkie treningi (starsze mogą ich nie spełniać).` : ""}</p>
+    <p>Podsumowanie nad tabelą: liczba treningów zgodnych z zasadą wśród ocenionych, ze wszystkich treningów (także schowanych pod „Pokaż starsze”).
+      Widać ${CFG.orderRecent} ostatnie treningi (CFG.orderRecent).</p>`;
 }
 
 function renderPlateaus() {
@@ -1622,6 +1750,10 @@ function renderPlateaus() {
     `${short(e.name)} (${s.streak} ${plTrening(s.streak)} czysto na ${kg(s.kgNow)})`).join(", "))}.</span></div>`;
   if (watch.length) html += `<p class="only-once">Do obserwacji (${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego ${CFG.sets} × cel): ${esc(watch.map(short).join(", "))}.</p>`;
   $("#plateaus").innerHTML = html;
+  $("#help-plateaus").innerHTML = `<p><b>Zastój</b> = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego ${CFG.sets} × cel (cel z dnia treningu).
+      Najpierw szukamy przyczyny, potem zmieniamy ciężar lub objętość.</p>
+    <p><b>Zaległe podniesienie</b> = ${CFG.overdueSessions} czyste treningi z rzędu na tym samym ciężarze. <b>Do obserwacji</b> = ${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego wyniku.</p>
+    <p>Gdy po ostatnim treningu jest wpis „ciezar” w decyzje.md, zamiast zastoju widać podjętą decyzję i jej powód.</p>`;
 }
 
 // ---------- Progres wg rodzin ruchu ----------
@@ -1655,7 +1787,8 @@ const MARK_TYPES_ALL = new Set(["kategoria", "wyjatek"]);                       
 
 function renderProgress() {
   const M = METRIC[progressMode];
-  $("#progress-sub").textContent = M.sub + " Pionowa przerywana linia z rombem to wpis z decyzje.md (najedź, by zobaczyć treść); linia przerywana serii to okres niepewny.";
+  $("#progress-sub").textContent = M.sub + " Pionowa przerywana linia z rombem to wpis z decyzje.md (najedź, by zobaczyć treść); linia przerywana serii to okres niepewny." +
+    " Kółko wokół punktu = trening z notatką (treść w dymku).";
   const host = $("#multiples");
   host.innerHTML = "";
   const fams = moveFamilies();
@@ -1965,23 +2098,40 @@ function cell(e, key) {
   }
 }
 
+// Rzadkie ćwiczenie: najwyżej CFG.rareMaxSessions treningów, ostatni ponad CFG.rareStaleDays dni przed najnowszym treningiem.
+const isRare = (e, latest) => e.sessions <= CFG.rareMaxSessions && dayDiff(new Date(Math.max(...e.sets.map(s => +s.workout.start))), latest) > CFG.rareStaleDays;
+
 function renderRecords() {
   const col = COLS.find(c => c.key === sortKey);
+  const latest = MODEL.workouts[MODEL.workouts.length - 1].start;
   const rows = [...MODEL.exercises].sort((a, b) => {
     const va = col.val(a), vb = col.val(b);
     return (typeof va === "string" ? va.localeCompare(vb) : va - vb) * sortDir || a.name.localeCompare(b.name);
   });
-  const t = $("#records");
-  t.innerHTML = `<thead><tr>${COLS.map(c =>
-    `<th data-key="${c.key}" class="sortable${c.num ? " num" : ""}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}"><button type="button">${esc(c.label)}<span class="arrow" aria-hidden="true">${c.key === sortKey ? (sortDir > 0 ? "▲" : "▼") : ""}</span></button></th>`).join("")}</tr></thead>
-    <tbody>${rows.map(e => `<tr>${COLS.map(c => `<td class="${c.num ? "num" : ""}">${cell(e, c.key)}</td>`).join("")}</tr>`).join("")}</tbody>`;
-  t.querySelectorAll("th button").forEach(btn => btn.addEventListener("click", () => {
-    const k = btn.closest("th").dataset.key;
-    sortDir = k === sortKey ? -sortDir : (k === "name" ? 1 : -1);
-    sortKey = k;
-    renderRecords();
-    $(`#records th[data-key="${k}"] button`).focus();   // fokus zostaje na sortowanej kolumnie
-  }));
+  const rare = rows.filter(e => isRare(e, latest));
+  // Obie tabele mają te same kolumny i to samo sortowanie.
+  const fill = (t, list) => {
+    t.innerHTML = `<thead><tr>${COLS.map(c =>
+      `<th data-key="${c.key}" class="sortable${c.num ? " num" : ""}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}"><button type="button">${esc(c.label)}<span class="arrow" aria-hidden="true">${c.key === sortKey ? (sortDir > 0 ? "▲" : "▼") : ""}</span></button></th>`).join("")}</tr></thead>
+      <tbody>${list.map(e => `<tr>${COLS.map(c => `<td class="${c.num ? "num" : ""}">${cell(e, c.key)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+    t.querySelectorAll("th button").forEach(btn => btn.addEventListener("click", () => {
+      const k = btn.closest("th").dataset.key;
+      sortDir = k === sortKey ? -sortDir : (k === "name" ? 1 : -1);
+      sortKey = k;
+      renderRecords();
+      $(`#${t.id} th[data-key="${k}"] button`).focus();   // fokus zostaje na sortowanej kolumnie
+    }));
+  };
+  fill($("#records"), rows.filter(e => !rare.includes(e)));
+  const rule = `Rzadkie ćwiczenia: najwyżej ${CFG.rareMaxSessions} ${plTrening(CFG.rareMaxSessions)}, ostatni ponad ${CFG.rareStaleDays} dni przed najnowszym treningiem (${fmtDate(latest)}). ` +
+    `Ustawienia: CFG.rareMaxSessions i CFG.rareStaleDays.`;
+  $("#rare-rule").textContent = rule + " Są w zwiniętej grupie pod główną tabelą.";
+  const more = $("#records-more");
+  if (!rare.length) { more.innerHTML = ""; return; }
+  more.innerHTML = toggleBtn("rare-group", "disc", `Rzadkie ćwiczenia (${rare.length})`) +
+    `<div id="rare-group"${OPEN.has("rare-group") ? "" : " hidden"}><p class="rare-note">${esc(rule)}</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela rzadkich ćwiczeń"><table id="records-rare" class="sticky-first"></table></div></div>`;
+  fill($("#records-rare"), rare);
 }
 
 function renderCharts() { renderProgress(); renderWeekly(); renderVolume(); renderTempo(); }
@@ -2019,8 +2169,39 @@ addEventListener("resize", () => {
   resizeTimer = setTimeout(() => MODEL && renderCharts(), 150);
 });
 
+// ---------- Menu skoków ----------
+// Wysokość menu w --nav-h (scroll-padding-top), żeby po skoku nagłówek sekcji nie był pod menu.
+// Aktywna sekcja (aria-current) = ostatnia, której górna krawędź minęła dół menu; przy sekcjach obok siebie pierwsza z nich.
+const NAV = $("nav.jump"), NAV_LINKS = [...NAV.querySelectorAll("a")];
+const NAV_TARGETS = NAV_LINKS.map(a => document.getElementById(a.hash.slice(1)));
+const navH = () => NAV.getBoundingClientRect().height;
+new ResizeObserver(() => document.documentElement.style.setProperty("--nav-h", Math.round(navH()) + "px")).observe(NAV);
+function navActive(i) {
+  NAV_LINKS.forEach((a, k) => k === i ? a.setAttribute("aria-current", "true") : a.removeAttribute("aria-current"));
+  const a = NAV_LINKS[i], ul = NAV.querySelector("ul");
+  if (!a) return;
+  // Aktywny link widoczny w pasku (przewijanie tylko paska, nie strony).
+  const l = a.offsetLeft - ul.offsetLeft, r = l + a.offsetWidth;
+  if (l < ul.scrollLeft) ul.scrollLeft = l - 8;
+  else if (r > ul.scrollLeft + ul.clientWidth) ul.scrollLeft = r - ul.clientWidth + 8;
+}
+let navPick = -1;
+NAV_LINKS.forEach((a, k) => a.addEventListener("click", () => { navPick = k; }));
+function updateActive() {
+  const de = document.documentElement, line = navH() + 24;
+  let idx = -1, top = -Infinity;
+  NAV_TARGETS.forEach((el, k) => { const t = el.getBoundingClientRect().top; if (t <= line && t > top + 1) { idx = k; top = t; } });
+  // Kliknięta sekcja stoi obok aktywnej (ta sama wysokość, np. Tygodnie | Objętość): podświetlam klikniętą.
+  if (navPick >= 0 && idx >= 0 && Math.abs(NAV_TARGETS[navPick].getBoundingClientRect().top - top) <= 1) idx = navPick;
+  if (scrollY > 0 && innerHeight + scrollY >= de.scrollHeight - 2) idx = NAV_TARGETS.length - 1;   // koniec strony: ostatnia sekcja
+  navActive(idx);
+}
+addEventListener("scroll", updateActive, { passive: true });
+addEventListener("resize", updateActive);
+
 try { load($("#csv-data").textContent.trim()); }
 catch (err) { $("#error").textContent = "Błąd wczytywania danych: " + err.message; $("#error").hidden = false; }
+updateActive();
 </script>
 </body>
 </html>
