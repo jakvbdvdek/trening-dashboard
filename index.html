@@ -80,7 +80,11 @@ section.card { background: var(--surface); border: 1px solid var(--border); bord
 .legend .ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--text-secondary); vertical-align: middle; margin-right: 6px; }
 
 .multiples { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
-.mini { background: var(--surface-2); border-radius: 10px; padding: 12px 12px 6px; min-width: 0; }
+/* Karta wykresu: wykres przypięty do dołu karty, więc w jednym rzędzie wykresy są wyrównane mimo różnej długości legend. */
+.mini { background: var(--surface-2); border-radius: 10px; padding: 12px 12px 6px; min-width: 0; display: flex; flex-direction: column; }
+.mini > .chart { margin-top: auto; padding-top: 6px; }
+.row2 > section.card { display: flex; flex-direction: column; }
+.row2 > section.card > .chart { margin-top: auto; }
 .mini h3 { font-size: 16px; font-weight: 600; margin: 0; }
 .mini .meta { display: flex; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 14px; margin: 2px 0 4px; }
 .mini .meta svg { vertical-align: middle; margin-right: 6px; flex: none; }
@@ -179,8 +183,14 @@ table.order td { font-size: 15px; }
 .warn .ic { color: var(--warning); font-weight: 700; }
 .info { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
 .info .ic { color: var(--text-muted); font-weight: 700; }
-.muscle-row { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 1.6fr); gap: 24px; margin-top: 14px; }
-.muscle-row > div { min-width: 0; }
+/* Dwa wewnętrzne panele po pół szerokości (na wąskim ekranie jeden pod drugim). */
+.muscle-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.muscle-row > .panel { min-width: 0; background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
+.panel .table-wrap { margin: 0; padding: 0; }
+.panel th { background: var(--surface-2); }
+.panel table.heat td.hc { border-color: var(--surface-2); }
+.panel table.sticky-first th:first-child, .panel table.sticky-first td:first-child,
+.panel table.heat.sticky-first tbody tr:hover td:first-child { background: var(--surface-2); }
 @media (max-width: 860px) { .muscle-row { grid-template-columns: minmax(0, 1fr); } }
 h4 { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
 .hbar { display: grid; grid-template-columns: minmax(96px, 130px) minmax(0, 1fr) 40px; align-items: center; gap: 8px; font-size: 15px; padding: 3px 0; }
@@ -275,17 +285,6 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
   <section class="card">
     <div class="card-head">
       <div>
-        <h2>Kontrola kolejności i zasad</h2>
-        <p>Leg press pierwszy, shoulder press pierwszy w bloku góry, złożone przed izolacją, brzuch na końcu, nic nie pominięte, rozgrzewki, bez upadku w złożonych</p>
-      </div>
-    </div>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela kontroli kolejności"><table id="order"></table></div>
-    <p class="only-once">Plan ustalał się stopniowo, więc starsze treningi mogą nie spełniać części zasad.</p>
-  </section>
-
-  <section class="card">
-    <div class="card-head">
-      <div>
         <h2>Zastoje i zaległe podniesienia</h2>
         <p>Zastój = 3 treningi z rzędu na tym samym ciężarze bez czystego 3 × cel. Najpierw szukamy przyczyny, potem zmieniamy ciężar lub objętość.</p>
       </div>
@@ -342,8 +341,8 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
     </div>
     <div id="muscle-warn"></div>
     <div class="muscle-row">
-      <div><h4>Średnio serii na tydzień</h4><div id="muscle-avg"></div></div>
-      <div><h4>Serie w poszczególnych tygodniach</h4><div class="table-wrap" tabindex="0" role="region" aria-label="Serie w poszczególnych tygodniach"><table class="heat sticky-first" id="muscle-heat"></table></div></div>
+      <div class="panel"><h4>Średnio serii na tydzień</h4><div id="muscle-avg"></div></div>
+      <div class="panel"><h4>Serie w poszczególnych tygodniach</h4><div class="table-wrap" tabindex="0" role="region" aria-label="Serie w poszczególnych tygodniach"><table class="heat sticky-first" id="muscle-heat"></table></div></div>
     </div>
     <details><summary>Jak przypisałem ćwiczenia do grup</summary><div class="map-list" id="muscle-map"></div></details>
   </section>
@@ -380,6 +379,17 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
       <div class="cal-scroll"><div class="cal" id="calendar"></div><div class="cal-legend" id="cal-legend"></div></div>
       <div class="cal-stats" id="cal-stats"></div>
     </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Kontrola kolejności i zasad</h2>
+        <p>Leg press pierwszy, shoulder press pierwszy w bloku góry, złożone przed izolacją, brzuch na końcu, nic nie pominięte, rozgrzewki, bez upadku w złożonych</p>
+      </div>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela kontroli kolejności"><table id="order"></table></div>
+    <p class="only-once">Plan ustalał się stopniowo, więc starsze treningi mogą nie spełniać części zasad.</p>
   </section>
 
   <section class="card">
