@@ -1231,13 +1231,23 @@ function parseCSV(text) {
   return rows.filter(r => r.length > 1).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] ?? "").trim()])));
 }
 
-const MON = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+// Daty z Hevy zależą od języka aplikacji: „Oct 11, 2026, 6:21 PM” (angielski) albo „22 paź 2026, 19:11” (polski).
+// Miesiąc rozpoznaję po pierwszych trzech literach (angielskie i polskie skróty), godzinę w formacie 12- albo 24-godzinnym.
+const MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+  sty: 0, lut: 1, kwi: 3, maj: 4, cze: 5, lip: 6, sie: 7, wrz: 8, paź: 9, lis: 10, gru: 11 };
 function parseDate(s) {
-  const m = s.match(/^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4}),\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (m && m[1] in MON) {
-    let h = +m[4] % 12;
-    if (m[6].toUpperCase() === "PM") h += 12;
-    return new Date(+m[3], MON[m[1]], +m[2], h, +m[5]);
+  s = s.trim();
+  // Miesiąc przed dniem („Oct 11, 2026, …”) albo dzień przed miesiącem („22 paź 2026, …”).
+  const m = s.match(/^(\p{L}+)\.?\s+(\d{1,2}),?\s+(\d{4}),?\s+(\d{1,2}):(\d{2})\s*([AP]M)?$/iu)
+    || s.match(/^(\d{1,2})\s+(\p{L}+)\.?,?\s+(\d{4}),?\s+(\d{1,2}):(\d{2})\s*([AP]M)?$/iu);
+  if (m) {
+    const [mon, day] = /^\d/.test(m[1]) ? [m[2], m[1]] : [m[1], m[2]];
+    const mi = MON[mon.toLowerCase().slice(0, 3)];
+    if (mi != null) {
+      let h = +m[4];
+      if (m[6]) h = h % 12 + (m[6].toUpperCase() === "PM" ? 12 : 0);
+      return new Date(+m[3], mi, +day, h, +m[5]);
+    }
   }
   const d = new Date(s);
   return isNaN(d) ? null : d;
@@ -2563,8 +2573,14 @@ function renderCharts() { renderProgress(); renderWeekly(); renderVolume(); rend
 function render() { renderKPIs(); renderPlanState();renderSignals(); renderOrder(); renderPlateaus(); renderCharts(); renderMuscles(); renderCalendar(); renderRecords(); }
 
 function load(text) {
-  const model = buildModel(parseCSV(text));
-  if (!model.workouts.length) throw new Error("Nie znalazłem w pliku żadnych treningów. Czy to eksport z Hevy?");
+  const rows = parseCSV(text);
+  const model = buildModel(rows);
+  if (!model.workouts.length) {
+    // Wiersze są, ale żadna data nie została rozpoznana: najczęściej nowy format daty w eksporcie (zależy od języka Hevy).
+    const sample = (rows.find(r => r.start_time) || {}).start_time;
+    throw new Error(sample ? `Nie rozpoznałem formatu daty w eksporcie (np. „${sample}”). Trzeba dopisać ten format w parseDate w szablonie.`
+      : "Nie znalazłem w pliku żadnych treningów. Czy to eksport z Hevy?");
+  }
   MODEL = model;
   $("#error").hidden = true;
   render();
