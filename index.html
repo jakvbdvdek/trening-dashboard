@@ -6,65 +6,99 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Dashboard treningowy</title>
 <style>
+/* Wygląd (NOTATKI, „Wygląd”): granat z delikatnym gradientem, błękit jako akcent, neon tylko jako poświata akcentów
+   (aktywny link, przełącznik, fokus, przycisk, liczby KPI, linie wykresów), nigdy na zwykłym tekście. Bez filtrów rozmycia. */
 :root {
   color-scheme: dark;
-  --page: #0d0d0d;
-  --surface: #1a1a19;
-  --surface-2: #232321;
-  --text-primary: #ffffff;
-  --text-secondary: #c3c2b7;
-  --text-muted: #a3a197;          /* ≥ 4.5:1 na wszystkich tłach (stronie, kartach, dymku) */
-  --grid: #2c2c2a;                /* linie siatki: dekoracyjne, wartości są w etykietach osi */
-  --axis: #76746d;                /* linia bazowa osi: ≥ 3:1 na kartach */
-  --border: rgba(255,255,255,0.10);   /* ramki kart: dekoracyjne (karty wyróżnia tło) */
-  --control-border: #807e76;      /* ramki kontrolek: ≥ 3:1 na stronie i kartach */
-  --focus: #8ab4f8;               /* obrys fokusu klawiatury: ≥ 3:1 na wszystkich tłach */
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --series-3: #199e70;
-  --series-4: #c98500;
-  --good: #0ca30c;
-  --warning: #fab219;
-  --serious: #ec835a;
-  --critical: #e66767;
+  --page: #0d1833;                /* pasek menu (jednolity, bez przezroczystości) */
+  --page-top: #0f1c3e;            /* gradient tła strony: góra … */
+  --page-bottom: #080d1c;         /* … dół (od ok. 900 px w dół jednolity) */
+  --glow-bg: rgba(60,160,255,0.22);   /* jasna plama u góry strony; kontrast liczony w jej najjaśniejszym punkcie */
+  --head-top: #17356a;            /* gradient nagłówka (najjaśniejszy punkt) */
+  --surface: #13223f;
+  --surface-2: #1a2d50;
+  --tip: #182b4d;                 /* tło dymka */
+  --text-primary: #f2f7ff;
+  --text-secondary: #c8d4ea;
+  --text-muted: #a3b4cf;          /* ≥ 4.5:1 na wszystkich tłach (gradient strony i nagłówka, karty, dymek) */
+  --grid: #2a3d63;                /* linie siatki: dekoracyjne, wartości są w etykietach osi */
+  --axis: #7a8db2;                /* linia bazowa osi: ≥ 3:1 na kartach */
+  --border: rgba(120,190,255,0.14);   /* ramki dekoracyjne */
+  --edge-a: rgba(90,200,255,0.70);    /* krawędź kart: gradient błękit → fiolet (dekoracyjna) */
+  --edge-b: rgba(160,120,255,0.18);
+  --control-border: #8195ba;      /* ramki kontrolek: ≥ 3:1 na stronie i kartach */
+  --focus: #9be2ff;               /* obrys fokusu klawiatury: ≥ 3:1 na wszystkich tłach */
+  --accent: #45c2ff;              /* błękit: aktywny link, aktywny przełącznik */
+  --accent-ink: #03101f;          /* tekst na błękicie */
+  --glow: rgba(70,195,255,0.55);  /* poświata akcentów (cień, nie filtr) */
+  --glow-soft: rgba(70,195,255,0.22);
+  --glow-r: 16px;
+  --num: #8fe0ff;                 /* liczby KPI: gradient błękitu (oba końce ≥ 4.5:1 na karcie) */
+  --num-2: #5aa8ff;
+  --series-1: #45c2ff;            /* serie: różne barwy + kształt punktu (koło, kwadrat, trójkąt, romb) */
+  --series-2: #c58fff;
+  --series-3: #40e0c8;
+  --series-4: #f5c85f;
+  --good: #4fe39a;                /* kolory znaczeniowe: wyraźnie inne barwy niż błękit, zawsze z ikoną */
+  --warning: #ffc857;
+  --serious: #ff9463;
+  --critical: #ff8d96;
+  --good-bg: rgba(79,227,154,0.12);
+  --warning-bg: rgba(255,200,87,0.12);
+  --serious-bg: rgba(255,148,99,0.12);
   --radius: 12px;
+  --t-fast: 200ms;                /* przejścia: 150–400 ms */
+  --t-slow: 400ms;                /* liczenie KPI, rysowanie linii */
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
-  background: var(--page);
+  background: radial-gradient(1200px 420px at 15% -80px, var(--glow-bg), transparent 70%),
+    linear-gradient(180deg, var(--page-top) 0, var(--page-bottom) 900px) no-repeat, var(--page-bottom);
   color: var(--text-primary);
   font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-text-size-adjust: 100%;
 }
 .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
-header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 24px; }
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin: -24px -16px 24px; padding: 24px 16px 18px;
+  border-radius: 0 0 16px 16px; background: linear-gradient(180deg, var(--head-top), transparent); }
+@media (max-width: 480px) { header.top { margin: -16px -12px 16px; padding: 16px 12px 14px; } }
 h1 { font-size: 28px; line-height: 1.2; margin: 0 0 4px; font-weight: 650; letter-spacing: -0.01em; }
 h2 { font-size: 19px; margin: 0; font-weight: 600; }
 .sub { color: var(--text-secondary); margin: 0; }
 .sub.small { font-size: 14px; }
 .muted { color: var(--text-muted); }
 /* Widoczny fokus przy nawigacji klawiaturą. */
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; box-shadow: 0 0 var(--glow-r) var(--glow-soft); }
 .btn {
-  display: inline-flex; align-items: center; gap: 8px; cursor: pointer; min-height: 44px;
-  background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--control-border);
-  border-radius: 8px; padding: 8px 16px; font: inherit;
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer; min-height: 44px; color: var(--text-primary);
+  border: 1px solid transparent; background: linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--accent), var(--control-border)) border-box;
+  border-radius: 8px; padding: 8px 16px; font: inherit; transition: box-shadow var(--t-fast) ease, transform 150ms ease;
 }
-.btn:hover { border-color: var(--text-secondary); }
-.btn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.btn:hover { box-shadow: 0 0 var(--glow-r) var(--glow); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 var(--glow-r) var(--glow-soft); }
 /* Pole pliku ukryte wizualnie, ale dostępne z klawiatury i czytnika ekranu. */
 .btn input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 #error { color: var(--critical); margin: 0 0 16px; }
 
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+/* Karty: krawędź z gradientem (dwie warstwy tła: wypełnienie + krawędź), bez filtrów. */
+.kpi, section.card { border: 1px solid transparent; border-radius: var(--radius);
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(135deg, var(--edge-a), var(--edge-b)) border-box; }
+.kpi { padding: 14px 16px; transition: transform var(--t-fast) ease, box-shadow var(--t-fast) ease; }
 .kpi .label { color: var(--text-secondary); font-size: 14px; }
-.kpi .value { font-size: 26px; font-weight: 650; line-height: 1.25; margin-top: 2px; }
+/* Kluczowe liczby: gradient błękitu (oba końce ≥ 4.5:1 na karcie). */
+.kpi .value { font-size: 26px; font-weight: 700; line-height: 1.25; margin-top: 2px; font-variant-numeric: tabular-nums;
+  background: linear-gradient(90deg, var(--num), var(--num-2)); -webkit-background-clip: text; background-clip: text; color: var(--num); -webkit-text-fill-color: transparent; }
 .kpi .note { color: var(--text-muted); font-size: 14px; }
+/* Delikatne uniesienie kart przy najechaniu (tylko urządzenia z myszą). */
+@media (hover: hover) {
+  .kpi:hover, .mini:hover, .nc:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.35), 0 0 var(--glow-r) var(--glow-soft); }
+}
 
-section.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 14px; margin-bottom: 16px; min-width: 0; }
+section.card { padding: 18px 18px 14px; margin-bottom: 16px; min-width: 0; }
 .card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
 .card-head p { margin: 2px 0 0; color: var(--text-secondary); font-size: 15px; }
 @media (max-width: 480px) { section.card { padding: 14px 12px 10px; } .wrap { padding: 16px 12px 40px; } }
@@ -81,7 +115,8 @@ section.card { background: var(--surface); border: 1px solid var(--border); bord
 
 .multiples { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
 /* Karta wykresu: wykres przypięty do dołu karty, więc w jednym rzędzie wykresy są wyrównane mimo różnej długości legend. */
-.mini { background: var(--surface-2); border-radius: 10px; padding: 12px 12px 6px; min-width: 0; display: flex; flex-direction: column; }
+.mini { background: var(--surface-2); border-radius: 10px; padding: 12px 12px 6px; min-width: 0; display: flex; flex-direction: column;
+  transition: transform var(--t-fast) ease, box-shadow var(--t-fast) ease; }
 .mini > .chart { margin-top: auto; padding-top: 6px; }
 .row2 > section.card { display: flex; flex-direction: column; }
 .row2 > section.card > .chart { margin-top: auto; }
@@ -116,15 +151,17 @@ table.sticky-first th:first-child, table.sticky-first td:first-child { position:
 table.sticky-first tbody tr:hover td:first-child { background: var(--surface-2); }
 
 .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--control-border); border-radius: 8px; padding: 2px; }
-.seg button { background: none; border: 0; color: var(--text-secondary); font: inherit; font-size: 15px; min-height: 44px; min-width: 44px; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
-.seg button[aria-pressed="true"] { background: #dcdacf; color: #0d0d0d; font-weight: 600; }
+.seg button { background: none; border: 0; color: var(--text-secondary); font: inherit; font-size: 15px; min-height: 44px; min-width: 44px; padding: 8px 14px; border-radius: 6px; cursor: pointer;
+  transition: background-color var(--t-fast) ease, color var(--t-fast) ease, box-shadow var(--t-fast) ease; }
+.seg button:hover { color: var(--text-primary); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; box-shadow: 0 0 var(--glow-r) var(--glow); }
 
 .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 600; padding: 1px 9px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
-.st-up { color: var(--good); }
-.st-hold { color: var(--warning); }
-.st-stall { color: var(--serious); }
-.st-old { color: var(--text-muted); }
-.st-down { color: var(--serious); }
+.st-up { color: var(--good); background: var(--good-bg); }
+.st-hold { color: var(--warning); background: var(--warning-bg); }
+.st-stall { color: var(--serious); background: var(--serious-bg); }
+.st-old { color: var(--text-secondary); border-color: var(--control-border); }
+.st-down { color: var(--serious); background: var(--serious-bg); }
 .ok { color: var(--good); }
 .bad { color: var(--serious); }
 .na { color: var(--text-muted); }
@@ -163,13 +200,13 @@ table.order td { font-size: 15px; }
 .rec-sort select { min-height: 44px; background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--control-border); border-radius: 8px; padding: 8px 10px; font: inherit; flex: 1; min-width: 0; }
 @media (min-width: 701px) { .rec-sort { display: none; } }
 .hb-track { position: relative; display: block; height: 14px; }
-.hb-band { position: absolute; top: 0; bottom: 0; background: rgba(255,255,255,0.06); border-left: 1px dashed var(--text-muted); border-right: 1px dashed var(--text-muted); }
+.hb-band { position: absolute; top: 0; bottom: 0; background: rgba(120,190,255,0.08); border-left: 1px dashed var(--text-muted); border-right: 1px dashed var(--text-muted); }
 .hb-base { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 1.5px dashed var(--text-muted); }
 .hbar .hb-fill { position: relative; top: 2px; }
 .hb-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; color: var(--text-muted); margin-top: 8px; align-items: center; }
 .hb-legend i { display: inline-block; vertical-align: middle; margin-right: 5px; }
 .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; }
-.nc { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.nc { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; min-width: 0; transition: transform var(--t-fast) ease, box-shadow var(--t-fast) ease; }
 .nc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .nc h3 { font-size: 14px; margin: 0; font-weight: 600; }
 .nc .target { margin-top: 8px; font-size: 15px; }
@@ -189,7 +226,7 @@ table.order td { font-size: 15px; }
 @media (max-width: 700px) { .plateau { grid-template-columns: 1fr; } }
 
 .warn, .info { display: flex; gap: 10px; align-items: flex-start; border-radius: 8px; padding: 9px 12px; margin-bottom: 8px; font-size: 15px; }
-.warn { background: rgba(250,178,25,0.07); border: 1px solid rgba(250,178,25,0.6); }
+.warn { background: var(--warning-bg); border: 1px solid rgba(255,200,87,0.6); }
 .warn .ic { color: var(--warning); font-weight: 700; }
 .info { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
 .info .ic { color: var(--text-muted); font-weight: 700; }
@@ -243,12 +280,19 @@ footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
    scroll-padding-top = wysokość menu (--nav-h, mierzona w skrypcie), więc menu nie zasłania nagłówka po skoku. */
 html { scroll-padding-top: calc(var(--nav-h, 56px) + 12px); }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
-nav.jump { position: sticky; top: 0; z-index: 5; background: var(--page); margin: 0 -16px 16px; padding: 2px 12px; border-bottom: 1px solid var(--grid); }
+/* Ograniczony ruch: wszystkie przejścia i animacje wyłączone (liczenie KPI i rysowanie linii wyłącza skrypt, REDUCED). */
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+/* Tryb wysokiego kontrastu: liczby KPI zwykłym kolorem zamiast gradientu. */
+@media (forced-colors: active) { .kpi .value { background: none; -webkit-text-fill-color: currentColor; } }
+/* Rysowanie linii wykresu przy pierwszym pokazaniu. */
+.draw { transition: stroke-dashoffset var(--t-slow) ease-out; }
+nav.jump { position: sticky; top: 0; z-index: 5; background: var(--page); margin: 0 -16px 16px; padding: 2px 12px; border-bottom: 1px solid var(--grid); box-shadow: 0 1px 0 var(--border), 0 8px 18px rgba(0,0,0,0.25); }
 nav.jump ul { display: flex; gap: 4px; list-style: none; margin: 0; padding: 4px; overflow-x: auto; scrollbar-width: thin; }
 nav.jump li { flex: none; }
-nav.jump a { display: flex; align-items: center; min-height: 44px; padding: 8px 12px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; white-space: nowrap; font-size: 15px; }
+nav.jump a { display: flex; align-items: center; min-height: 44px; padding: 8px 12px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; white-space: nowrap; font-size: 15px;
+  transition: background-color var(--t-fast) ease, color var(--t-fast) ease, box-shadow var(--t-fast) ease; }
 nav.jump a:hover { color: var(--text-primary); background: var(--surface-2); }
-nav.jump a[aria-current="true"] { background: #dcdacf; color: #0d0d0d; font-weight: 600; }
+nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; box-shadow: 0 0 var(--glow-r) var(--glow); }
 @media (max-width: 480px) { nav.jump { margin: 0 -12px 12px; padding: 2px 8px; } }
 
 /* Rozwijane elementy (Jak to czytać?, Rzadkie ćwiczenia): przycisk z aria-expanded, cel ≥ 44 px. */
@@ -279,7 +323,7 @@ nav.jump a[aria-current="true"] { background: #dcdacf; color: #0d0d0d; font-weig
 
 #tip {
   position: fixed; z-index: 10; pointer-events: none; max-width: min(300px, calc(100vw - 16px));
-  background: #2a2a28; color: var(--text-primary); border: 1px solid var(--control-border);
+  background: var(--tip); color: var(--text-primary); border: 1px solid var(--control-border);
   border-radius: 8px; padding: 8px 10px; font-size: 14px; line-height: 1.45;
   box-shadow: 0 6px 24px rgba(0,0,0,0.5);
 }
@@ -1443,7 +1487,35 @@ const toggleBtn = (id, cls, closed, open = closed) => `<button type="button" cla
 
 // series: [{ name, color, dashed, shape, points: [{ d, v, rows, note, title }] }]; każda seria ma własne daty.
 // markers: [{ d, html }] — wpisy z decyzje.md, rysowane jako pionowa przerywana linia z rombem.
-function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFixed = null, fmt = v => nf(v, 1) }) {
+// Animacje (wyłączone przy prefers-reduced-motion): rysowanie linii wykresu przy pierwszym pokazaniu i liczenie KPI w górę.
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DRAWN = new Set();   // wykresy już narysowane z animacją (ponowne renderowanie, np. zmiana miary, bez animacji)
+function drawOnce(svg, key) {
+  if (REDUCED || DRAWN.has(key) || !("IntersectionObserver" in window)) return;
+  DRAWN.add(key);
+  const paths = [...svg.querySelectorAll(".draw")];
+  for (const p of paths) { const L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L; }
+  new IntersectionObserver((es, io) => {
+    if (!es.some(e => e.isIntersecting)) return;
+    io.disconnect();
+    for (const p of paths) { p.style.strokeDashoffset = 0; p.addEventListener("transitionend", () => { p.style.strokeDasharray = ""; p.style.strokeDashoffset = ""; }, { once: true }); }
+  }).observe(svg);
+}
+// Liczba w tekście KPI (np. „175,4 t”, „2,4”, „434”) liczy się od zera do wartości końcowej; tekst bez liczby na początku (np. „13 h 36 min”) bez animacji.
+function countUp(el) {
+  const m = el.textContent.match(/^(\d[\d\s ]*)(?:,(\d+))?([^\d]*)$/);
+  if (REDUCED || !m) return;
+  const to = +(m[1].replace(/[\s ]/g, "") + (m[2] ? "." + m[2] : "")), dec = m[2] ? m[2].length : 0, suf = m[3], final = el.textContent;
+  const t0 = performance.now(), dur = parseFloat(css("--t-slow")) || 400;
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / dur), e = 1 - (1 - k) ** 3;
+    el.textContent = k < 1 ? (to * e).toLocaleString("pl-PL", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + suf : final;
+    if (k < 1) setTimeout(step, 16);
+  };
+  step();
+}
+
+function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFixed = null, fmt = v => nf(v, 1), drawKey = null }) {
   host.innerHTML = "";
   const W = host.clientWidth, H = height;
   const m = { l: 38, r: 14, t: 18, b: 24 };
@@ -1496,8 +1568,10 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
     for (const p of s.points) if (p.solo) segs.push([]); else segs[segs.length - 1].push(p);
     for (const g of segs.filter(g => g.length >= 2)) {
       const d = g.map((p, i) => `${i ? "L" : "M"}${X(p.d)},${Y(p.v)}`).join("");
+      // Poświata linii: szersza, półprzezroczysta kopia pod linią (bez filtra rozmycia). Linia przerywana (okres niepewny) bez poświaty.
+      if (!s.dashed) svgEl("path", { d, fill: "none", stroke: s.color, "stroke-width": 7, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: 0.35, class: "glow draw" }, svg);
       svgEl("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round",
-        ...(s.dashed ? { "stroke-dasharray": "6 4" } : {}) }, svg);
+        ...(s.dashed ? { "stroke-dasharray": "6 4" } : { class: "draw" }) }, svg);
     }
   });
   series.forEach(s => s.points.forEach(p => {
@@ -1516,6 +1590,7 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
       .textContent = unit ? `${fmt(p.v)} ${unit}` : fmt(p.v);
   });
 
+  if (drawKey) drawOnce(svg, drawKey);
   const cross = svgEl("line", { y1: m.t, y2: H - m.b, stroke: css("--text-muted"), "stroke-width": 1, "stroke-dasharray": "3 3", visibility: "hidden" }, svg);
   const hit = svgEl("rect", { x: m.l - 10, y: 0, width: W - m.l - m.r + 20, height: H, fill: "transparent" }, svg);
   let active = null;
@@ -1564,7 +1639,7 @@ function barChart(host, { labels, values, tips, height = 220, valueLabels = fals
   }
   if (band) {
     // Pas celu: tło + przerywane krawędzie (krawędzie ≥ 3:1 względem karty).
-    svgEl("rect", { x: m.l, width: W - m.l - m.r, y: Y(band[1]), height: Y(band[0]) - Y(band[1]), fill: "rgba(255,255,255,0.06)" }, svg);
+    svgEl("rect", { x: m.l, width: W - m.l - m.r, y: Y(band[1]), height: Y(band[0]) - Y(band[1]), fill: "rgba(120,190,255,0.08)" }, svg);
     for (const b of [band[0], band[1]])
       svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(b), y2: Y(b), stroke: css("--text-muted"), "stroke-width": 1, "stroke-dasharray": "2 3" }, svg);
     svgEl("text", { x: m.l + 4, y: Y(band[1]) - 5, "font-size": 12, fill: css("--text-secondary") }, svg).textContent = band[2];
@@ -1639,6 +1714,8 @@ function renderKPIs() {
   ];
   $("#kpis").innerHTML = tiles.map(([l, v, n]) =>
     `<div class="kpi"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="note">${esc(n)}</div></div>`).join("");
+  // Liczby KPI liczą się w górę tylko przy pierwszym wczytaniu strony.
+  if (!renderKPIs.done) { renderKPIs.done = true; document.querySelectorAll("#kpis .value").forEach(countUp); }
 }
 
 // ---------- Sygnały, kolejność, zastoje (wg założeń) ----------
@@ -2193,7 +2270,7 @@ function repsCard(host, e, M) {
     points: pts.map(p => ({ d: p.date, v: val(p), note: p.note, title: p.workout.title,
       rows: tipRow("Serie", p.reps.join(" / ")) + tipRow("Suma powtórzeń", nf(p.sum)) +
         (p.rpe != null ? tipRow("Średnie RPE", nf(p.rpe, 1)) : "") + (p.failure ? tipRow("Do upadku", "tak") : "") })) }];
-  lineChart($(".chart", card), { series, markers: markersFor(familyOf(e.name)), unit, fmt, yFixed: rpeMode ? M.yFixed : null });
+  lineChart($(".chart", card), { series, markers: markersFor(familyOf(e.name)), unit, fmt, yFixed: rpeMode ? M.yFixed : null, drawKey: "reps:" + e.name });
 }
 
 function renderProgress() {
@@ -2252,7 +2329,7 @@ function renderProgress() {
     }).join("");
     card.innerHTML = `<h3>${esc(single ? f.list[0].name : f.name)}</h3>${meta}<div class="chart"></div>`;
     host.appendChild(card);
-    if (series.length) lineChart($(".chart", card), { series, markers: markersFor(f.name), unit: M.unit, fmt: M.fmt, yFixed: M.yFixed || null });
+    if (series.length) lineChart($(".chart", card), { series, markers: markersFor(f.name), unit: M.unit, fmt: M.fmt, yFixed: M.yFixed || null, drawKey: f.name });
   }
   const once = fams.filter(f => f.sessions < 2).flatMap(f => f.list.map(e => e.name));
   const groups = new Map();
@@ -2336,7 +2413,7 @@ function renderMuscles() {
       <span class="hb-track"><span class="hb-band" style="left:${pct(p2lo)}%;width:${pct(p2hi - p2lo)}%"></span><span class="hb-base" style="left:${pct(CFG.weeklySetsBase)}%"></span><span class="hb-fill" style="width:${pct(avg(g))}%"></span></span>
       <span class="hb-val">${esc(nf(avg(g), 1))}</span></div>`).join("") +
     `<div class="hb-legend"><span><i style="width:0;height:12px;border-left:1.5px dashed var(--text-muted)"></i>${CFG.weeklySetsBase} = obecny poziom</span>
-      <span><i style="width:14px;height:10px;background:rgba(255,255,255,0.12);border-radius:2px"></i>${p2lo}–${p2hi} = zakres docelowy</span></div>`;
+      <span><i style="width:14px;height:10px;background:rgba(120,190,255,0.16);border-radius:2px"></i>${p2lo}–${p2hi} = zakres docelowy</span></div>`;
 
   const maxCell = Math.max(...rows.flatMap(g => groups.get(g)), 1);
   $("#muscle-heat").innerHTML = `<thead><tr><th class="rl"></th>${wk.map(w => `<th>${esc(fmtDate(w.start))}</th>`).join("")}<th class="tot">Razem</th></tr></thead>
