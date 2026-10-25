@@ -165,6 +165,9 @@ table.sticky-first tbody tr:hover td:first-child { background: var(--surface-2);
 .ok { color: var(--good); }
 .bad { color: var(--serious); }
 .na { color: var(--text-muted); }
+.exc { color: var(--text-secondary); }   /* dozwolony wyjątek w kontroli kolejności: ikona ℹ i tekst, nie ✓ ani ✗ */
+/* Informacja ℹ przy sygnale i w tabeli zastoju: trening bez wzrostu sumy po podniesieniu ćwiczenia powiązanego (licznik bez zmian). */
+.rel-info { color: var(--text-secondary); font-size: 14px; margin-top: 3px; }
 table.plan td, table.order td { white-space: normal; vertical-align: top; }
 table.plan td.nw, table.order td.nw { white-space: nowrap; }
 table.plan .why { color: var(--text-muted); font-size: 14px; }
@@ -173,6 +176,9 @@ table.plan td:nth-child(3) { min-width: 190px; font-size: 15px; }
 table.plan td:nth-child(5) { min-width: 200px; }
 table.plan td:nth-child(6) { min-width: 220px; }
 table.order td { font-size: 15px; }
+table.order td:not(.lead) .why { color: var(--text-secondary); font-size: 14px; }
+/* Nagłówki kontroli kolejności zawijane (np. „Brzuch (na końcu; od 23 paź po leg pressie)”), żeby tabela mieściła się w karcie na komputerze. */
+table.order th { white-space: normal; vertical-align: bottom; }
 /* Wąski ekran: tabele sygnałów i kontroli kolejności jako karty (etykieta kolumny przy każdej wartości). */
 @media (max-width: 700px) {
   table.stack { min-width: 0; }
@@ -185,7 +191,8 @@ table.order td { font-size: 15px; }
   table.stack td.lead { font-size: 17px; }
   table.plan.stack td:first-child { display: none; }
   table.stack tbody tr:hover td { background: none; }
-  table.order.stack td { display: flex; justify-content: space-between; gap: 12px; }
+  table.order.stack td { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; }
+  table.order.stack td:not(.lead) .why { flex-basis: 100%; text-align: right; }   /* dopisek (np. przy wyjątku ℹ) w osobnej linii pod wartością */
   table.order.stack td[data-label]:not(.lead)::before { display: inline; font-size: 14px; font-weight: 500; }
   table.order.stack td.lead { display: block; }
   /* Rekordy jako karty: nazwa ćwiczenia na górze, pod nią wartości „etykieta … wartość”. */
@@ -223,13 +230,17 @@ table.order td { font-size: 15px; }
 .plateau th, .plateau td { padding: 4px 14px 4px 0; position: static; cursor: default; font-size: 14px; }
 .plateau ul { margin: 6px 0 0; padding-left: 18px; }
 .plateau li { margin-bottom: 4px; }
-@media (max-width: 700px) { .plateau { grid-template-columns: 1fr; } }
+.plateau td .rel-info { white-space: normal; }   /* dopisek ℹ w komórce „Powtórzenia” zawijany, tabela nie poszerza karty */
+@media (max-width: 700px) { .plateau { grid-template-columns: minmax(0, 1fr); } }
 
 .warn, .info { display: flex; gap: 10px; align-items: flex-start; border-radius: 8px; padding: 9px 12px; margin-bottom: 8px; font-size: 15px; }
 .warn { background: var(--warning-bg); border: 1px solid rgba(255,200,87,0.6); }
 .warn .ic { color: var(--warning); font-weight: 700; }
 .info { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
 .info .ic { color: var(--text-muted); font-weight: 700; }
+/* Gotowe do podniesienia: limit z decyzje.md nad listą, lista bez wyróżniania (dashboard niczego nie wybiera). */
+.info.ready .ready-note { margin: 2px 0 4px; color: var(--text-primary); }
+.info.ready ul { margin: 0; padding-left: 18px; }
 /* Dwa wewnętrzne panele po pół szerokości (na wąskim ekranie jeden pod drugim). */
 .muscle-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 .muscle-row > .panel { min-width: 0; background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
@@ -389,6 +400,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
         <span class="badge st-old">◆ Decyzja podjęta</span>
         <span class="badge st-old">↗ Podbijanie w trakcie</span>
         <span class="badge st-down">↘ Zejście w trakcie</span>
+        <span class="badge st-hold">◐ Budowanie powtórzeń</span>
       </div>
     </div>
     <div class="help" id="help-signals" hidden>
@@ -1062,6 +1074,7 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
   - `alias`: „Liczyć jako <nazwa z Hevy>”, obowiązuje od daty wpisu. Gdy alias dotyczy tylko okresu, na końcu dopisujemy datę końcową (włącznie): „Liczyć jako <nazwa z Hevy> do RRRR-MM-DD”. Wpisy spoza zakresu są osobną maszyną.
   - `maszyna`: „Wpisy przed RRRR-MM-DD to inna maszyna (opis)” (zamknięty okres starej maszyny) albo „Okres niepewny do RRRR-MM-DD …” (od daty wpisu do podanej daty włącznie nie wiadomo, która maszyna) albo „… maszyna rozpoznawana po słowie "A" albo "B" w notatce ćwiczenia …” (od daty wpisu jedno ćwiczenie w Hevy dzieli się na maszyny według słowa w notatce ćwiczenia; brak słowa = pierwsza wymieniona maszyna, a dashboard ostrzega, gdy ciężar roboczy takiego treningu odbiega o ponad 15% od mediany 3 poprzednich treningów tej maszyny; oba słowa = trening niepewny, pokazywany jako osobny punkt bez połączenia z innymi).
   - `kategoria` z Ćwiczenie = `*`: nowe cele, np. „zlozone_maszyna 3 × 10, izolacja 3 × 12”.
+  - `ciezar` zaczynający się od „<N> kg” ze słowem „budowanie”, np. „6 kg, budowanie do 3 × 12”: od daty wpisu pierwszy ciąg pełnych treningów na N kg to nowy ciężar, więc treningi poniżej celu są oceniane jako budowanie powtórzeń, także gdy z danych nie widać podniesienia (np. pierwszy trening ćwiczenia ze zmianą ciężaru w trakcie).
   - `kategoria` dla pojedynczego ćwiczenia: zaczyna się od nazwy kategorii (`zlozone_maszyna`, `izolacja`, `brzuch`, `zlozone_wolne`). Dopisujemy go **tylko wtedy, gdy ćwiczenie zmienia kategorię**; od podanej daty nadpisuje przypisanie z `FAMILIES` w dashboardzie.
 - W tekście komórek nie używamy znaku `|`.
 - Nowe wpisy dopisujemy na końcu tabeli. Starych nie edytujemy; jeśli coś się zmienia, dopisujemy nowy wpis zaczynający się od „Korekta wpisu z RRRR-MM-DD:”.
@@ -1091,6 +1104,13 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-10-18 | * | zasada | Tydzień utrwalenia 18–22.10 bez podniesień | Decyzja Jakuba po serii szybkich podniesień; 5 treningów co dwa dni |
 | 2026-10-20 | * | zasada | Brzuch poza treningiem siłowym (próba porannej rutyny w domu); 20.10 i 22.10 bez brzucha | Na końcu treningu ręce zbyt zmęczone na unoszenie kolan |
 | 2026-10-23 | Knee Raise Parallel Bars | kolejnosc | Brzuch wraca do rutyn A/B/C jako ćwiczenie „na kolejkę”: w dowolnym miejscu po leg pressie, nie w przerwie między seriami ćwiczenia złożonego; serie można rozbić | Poranna rutyna się nie przyjęła; na końcu treningu ręce zbyt zmęczone |
+| 2026-10-22 | * | zasada | Kolejność listy „Gotowe do podniesienia”: od najniższego średniego RPE serii roboczych (bez rozgrzewkowych) z ostatniego treningu danego ćwiczenia (doprecyzowane 2026-10-25) | Pierwszeństwo przy podniesieniu mają ćwiczenia z największym zapasem; najwyżej 3 podniesienia na trening, wybór należy do Jakuba |
+| 2026-10-23 | Knee Raise Parallel Bars | kolejnosc | Korekta wpisu z 2026-10-23: w kontroli kolejności „brzuch po leg pressie” = każda seria unoszenia kolan po leg pressie; crunch na końcu treningu jest zgodny. Warunek „nie w przerwie między seriami ćwiczenia złożonego” zostaje wskazówką, dashboard go nie ocenia. Do 2026-10-22 obowiązywało „brzuch na końcu” | Eksport z Hevy zapisuje wszystkie serie ćwiczenia razem, więc z danych nie da się sprawdzić, czy seria brzucha była w przerwie między seriami innego ćwiczenia |
+| 2026-10-23 | Leg Press (Machine) | kolejnosc | Wyjątek od „zawsze pierwsze”: dozwolone, gdy cały blok nóg (Leg Press, Leg Extension, Leg Curl) stoi po całym bloku góry, a leg press jest pierwszy wśród nóg; brzuch nie należy do żadnego bloku i nie przerywa bloku. Błąd, gdy ćwiczenia nóg są rozrzucone między ćwiczeniami góry albo leg press nie jest pierwszy wśród nóg. Dotyczy całej historii od 2026-10-08 (także 11.10) | Przy zajętych maszynach nogi bywają robione po górze (11.10: dół na koniec, bo maszyny były zajęte); wtedy blok nóg zostaje w całości, z leg pressem na początku |
+| 2026-10-25 | * | zasada | Budowanie powtórzeń po podniesieniu: podniesienie rozpoznawane wyłącznie z danych (wyższy ciężar roboczy niż w poprzednim treningu na tej samej maszynie), bez wymagania notatki; notatka „podniesienie” jest tylko informacją. Kolejne treningi na nowym ciężarze poniżej celu kategorii, w których suma powtórzeń rośnie względem poprzedniego treningu na tym ciężarze, to „budowanie powtórzeń” z postępem do celu (np. 23/36) i nie liczą się do zastoju; trening na nowym ciężarze bez wzrostu sumy liczy się do zastoju jak dotąd | Po dużym skoku ciężaru dojście do celu trwa kilka treningów; wzrost sumy powtórzeń to postęp, nie zastój |
+| 2026-10-25 | Preacher Curl (Machine) | ciezar | 25 → 32 kg; start 3 × 8, dobijanie do 3 × 12 | Na tej maszynie po 25 kg następny krok to 32 kg; skok jest duży, więc najpierw mniej powtórzeń |
+| 2026-10-25 | * | zasada | Korekta wpisu z 2026-10-25 (budowanie powtórzeń): na nowym ciężarze poniżej celu kategorii zastój = suma powtórzeń nie rośnie przez 3 treningi z rzędu, licząc trening, z którym porównujemy (np. 23, 23, 23); każdy wzrost sumy zeruje licznik (25, 25, 27, 27, 27 → zastój dopiero po trzecim 27; 25, 25, 27, 27 → bez zastoju). Wyjątek: trening bez wzrostu sumy nie zwiększa licznika i go nie zeruje, jeśli od poprzedniego treningu tego ćwiczenia podniesiono ciężar w ćwiczeniu powiązanym (lista w CFG.relatedLifts i w założeniach, sekcja 7) | Dotychczasowy licznik pomijał treningi ze wzrostem sumy, więc dawał zastój mimo wzrostu w środku (np. 25, 25, 27, 27, 27); podniesienie ćwiczenia, które męczy te same mięśnie (np. wiosłowanie przed bicepsem), tłumaczy brak wzrostu |
+| 2026-10-14 | Lateral Raise (Dumbbell) | ciezar | 6 kg, budowanie do 3 × 12 | Pierwszy trening wznosów 14.10: start na 5 kg, od 2. serii 6 kg, przy których Jakub zostaje; z danych nie widać podniesienia, bo wcześniej nie było pełnego treningu na niższym ciężarze |
 </script>
 <script>
 "use strict";
@@ -1105,9 +1125,21 @@ const CFG = {
   sets: 3,                // serie robocze na ćwiczenie
   // Ocena serii i sygnały
   overTargetReps: 3,       // „cel przekroczony”: ostatnia seria ≥ cel + tyle powtórzeń
-  stallSessions: 3,        // zastój: tyle pełnych treningów z rzędu na tym samym ciężarze bez czystego wyniku
+  stallSessions: 3,        // zastój: tyle pełnych treningów z rzędu na tym samym ciężarze bez czystego wyniku (przy budowaniu powtórzeń: bez wzrostu sumy)
+  // Ćwiczenia powiązane (decyzje.md 25.10, zastój przy budowaniu powtórzeń): ćwiczenie ← ćwiczenia, które męczą te same mięśnie. Trening budowania
+  // bez wzrostu sumy nie zwiększa licznika zastoju i go nie zeruje, jeśli od poprzedniego treningu tego ćwiczenia podniesiono ciężar w ćwiczeniu
+  // powiązanym (podniesienie z danych). Nazwy z Hevy; „Chest Press (Machine)” obejmuje obie maszyny z notatki (talerze i stos).
+  relatedLifts: {
+    "Preacher Curl (Machine)": ["Seated Row (Machine)", "Lat Pulldown (Machine)"],
+    "Seated Triceps Press": ["Chest Press (Machine)", "Seated Shoulder Press (Machine)", "Shoulder Press (Machine Plates)"],
+    "Lateral Raise (Dumbbell)": ["Seated Shoulder Press (Machine)", "Shoulder Press (Machine Plates)"],
+    "Rear Delt Reverse Fly (Machine)": ["Seated Row (Machine)"],
+    "Chest Fly (Machine)": ["Chest Press (Machine)"],
+    "Leg Extension (Machine)": ["Leg Press (Machine)"],
+  },
   overdueSessions: 3,      // „zaległe podniesienie”: tyle czystych treningów z rzędu na tym samym ciężarze
   raiseMaxLastRpe: 9,      // gotowe do podniesienia: czysto ×2+ i ostatnia seria najnowszego treningu z RPE najwyżej tyle (wyżej: „czysto, ale bez zapasu”)
+  raiseRpeFrom: "2026-10-16",   // warunek raiseMaxLastRpe od tego dnia (zasada z decyzje.md); dla wcześniejszych treningów gotowość = same 2 czyste treningi z rzędu
   maxRaisesPerSession: 3,  // zasada z decyzje.md (16.10): najwyżej tyle podniesień na trening; tylko w opisie, dashboard niczego nie planuje
   cleanMaxRpe: 9.5,        // czysta seria: bez upadku i RPE najwyżej tyle (czyli < 10)
   emptySetMaxRpe: 6,       // pusta objętość: seria z RPE najwyżej tyle nie liczy się do objętości
@@ -1203,6 +1235,7 @@ const fmtTime = d => d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2
 const fmtDur = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? `${h} h ${m} min` : `${m} min`; };
 const plSerie = n => n === 1 ? "seria" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? "serie" : "serii";
 const plTrening = n => n === 1 ? "trening" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? "treningi" : "treningów";
+const plPodniesienie = n => n === 1 ? "podniesienie" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? "podniesienia" : "podniesień";
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -1232,6 +1265,9 @@ const targetFor = (name, date) => TARGETS.filter(t => t.from <= date).pop().reps
 const isoDay = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const shiftDay = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 const dm = d => `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+// Czysto, ale bez zapasu: ostatnia seria treningu z RPE powyżej CFG.raiseMaxLastRpe, oceniane dla treningów od CFG.raiseRpeFrom.
+const RAISE_RPE_FROM = isoDay(CFG.raiseRpeFrom);
+const noReserve = x => x.p.date >= RAISE_RPE_FROM && x.lastRpe > CFG.raiseMaxLastRpe;
 // Aliasy: wpis „alias”, Zmiana = „Liczyć jako <nazwa z Hevy>” (opcjonalnie „… do RRRR-MM-DD”, włącznie).
 // Obowiązuje od daty wpisu; wpisy spoza zakresu to osobna maszyna.
 const ALIASES = DECISIONS.filter(d => d.type === "alias").map(d => {
@@ -1825,21 +1861,81 @@ function exStats(e) {
   const li = info[info.length - 1];          // ostatnia sesja (do wyświetlenia)
   const lf = full[full.length - 1] || li;     // ostatnia pełna sesja (do oceny)
   const kgNow = lf.kg;
-  let streak = 0, run = 0;
+  // Budowanie powtórzeń po podniesieniu (decyzje.md 25.10): trening na nowym ciężarze poniżej celu (bez zejścia w trakcie).
+  // Suma = CFG.sets serii na ciężarze roboczym. Pierwszy trening na nowym ciężarze i każdy ze wzrostem sumy wobec poprzedniego treningu
+  // na tym ciężarze to „budowanie powtórzeń” (x.build). Bez wzrostu sumy: x.hold = podniesienia w ćwiczeniach powiązanych (CFG.relatedLifts)
+  // od poprzedniego treningu (bez dnia tamtego treningu, z dniem tego), albo null.
+  markRaises(e, full);
+  full.forEach((x, i) => {
+    x.sum = sum(x.top.slice(0, CFG.sets), s => s.reps);
+    x.goal = CFG.sets * x.target;
+    x.building = x.newKg && x.mode !== "drop" && x.minReps < x.target;
+    const prev = i > x.k ? full[i - 1] : null;
+    x.build = x.building && (!prev || x.sum > prev.sum) ? { prev } : null;
+    const rel = x.building && !x.build ? relatedRaises(e, prev.p.date, x.p.date) : [];
+    x.hold = rel.length ? rel : null;
+  });
+  let streak = 0;
   for (let i = full.length - 1; i >= 0 && full[i].kg === kgNow && full[i].clean; i--) streak++;
-  for (let i = full.length - 1; i >= 0 && full[i].kg === kgNow && !full[i].clean; i--) run++;
+  const runAll = [];
+  for (let i = full.length - 1; i >= 0 && full[i].kg === kgNow && !full[i].clean; i--) runAll.unshift(full[i]);
+  // Licznik zastoju w ciągu nieczystych treningów (decyzje.md, korekta 25.10): zwykły trening +1; budowanie powtórzeń (pierwszy trening
+  // na nowym ciężarze albo wzrost sumy) zaczyna licznik od nowa od 1, licząc trening, z którym porównuję kolejne (23, 23, 23 = zastój;
+  // 25, 25, 27, 27, 27 = zastój dopiero po trzecim 27); trening budowania bez wzrostu sumy +1, a z podniesieniem w ćwiczeniu powiązanym bez zmiany.
+  // runs: treningi od początku licznika (także te bez zmiany licznika).
+  const count = list => {
+    let n = 0, from = 0;
+    list.forEach((x, j) => { if (x.build) { n = 1; from = j; } else if (!x.hold) n++; });
+    return { n, runs: list.slice(from) };
+  };
   // Przyczyna przeanalizowana: wpis w decyzje.md dla ćwiczenia (STALL_DECISION_TYPES) z datą po początku serii nieczystych
-  // treningów przerywa licznik; liczą się tylko treningi od dnia decyzji. Ponownie CFG.stallSessions nieczystych = nowy zastój.
+  // treningów przerywa licznik; liczą się tylko treningi od dnia decyzji. Ponownie CFG.stallSessions w liczniku = nowy zastój.
   // Decyzje po kolei: każda z datą po początku bieżącego licznika go przerywa; „analyzed” = ostatnia decyzja, przed którą był zastój.
-  let seg = full.slice(full.length - run), analyzed = null;
+  let seg = runAll, analyzed = null;
   for (const d of exDecisions(e)) {
     if (!seg.length || dayDiff(seg[0].p.date, d.date) <= 0) continue;
-    const before = seg.filter(x => x.p.date < d.date).length;
-    if (before >= CFG.stallSessions) analyzed = { d, before };
+    const before = count(seg.filter(x => x.p.date < d.date));
+    if (before.n >= CFG.stallSessions) analyzed = { d, before: before.n, runs: before.runs };
     seg = seg.filter(x => x.p.date >= d.date);
   }
-  return { info, full, li, lf, kgNow, streak, unclean: seg.length, analyzed };
+  // run: treningi bieżącego licznika zastoju (od ostatniego wzrostu sumy przy budowaniu i od ostatniej decyzji).
+  const cur = count(seg);
+  return { info, full, li, lf, kgNow, streak, unclean: cur.n, run: cur.runs, analyzed };
 }
+// Początek budowania z decyzje.md: wpis „ciezar” zaczynający się od „<N> kg” i zawierający „budowanie” (np. „6 kg, budowanie do 3 × 12”).
+// Od daty wpisu pierwszy ciąg pełnych treningów na N kg to nowy ciężar, także bez wcześniejszego pełnego treningu na niższym ciężarze
+// (np. pierwszy trening ćwiczenia z podbijaniem w trakcie, którego z danych nie da się uznać za podniesienie).
+const buildStarts = e => DECISIONS.filter(d => d.type === "ciezar" && (d.ex === e.name || d.ex === sourceOf(e.name)))
+  .map(d => ({ d, kg: num((d.change.match(/^(\d+(?:[.,]\d+)?)\s*kg\b.*\bbudowanie\b/i) || [])[1]) })).filter(x => x.kg != null);
+// Podniesienie z danych: ciężar roboczy pełnego treningu wyższy niż w poprzednim pełnym treningu tej maszyny (notatka „podniesienie”
+// niczego nie zmienia). x.k = pierwszy pełny trening na tym ciężarze, x.raised = poprzedni (niższy) ciężar albo null,
+// x.startDec = wpis „<N> kg, budowanie …” wyznaczający początek tego ciężaru albo null, x.newKg = nowy ciężar (jedno albo drugie).
+function markRaises(e, full) {
+  const starts = buildStarts(e);
+  full.forEach((x, i) => {
+    let k = i;
+    while (k > 0 && full[k - 1].kg === x.kg) k--;
+    x.k = k;
+    x.raised = k > 0 && full[k - 1].kg < x.kg ? full[k - 1].kg : null;
+    const st = x.raised == null && starts.find(s => s.kg === x.kg && s.d.date <= full[k].p.date && (k === 0 || full[k - 1].p.date < s.d.date));
+    x.startDec = st ? st.d : null;
+    x.newKg = x.raised != null || !!x.startDec;
+  });
+  return full;
+}
+// Podniesienia ciężaru (z danych) w ćwiczeniach powiązanych z `e` (CFG.relatedLifts, także maszyny wydzielone z notatki) w okresie (from, to]:
+// tylko pierwszy pełny trening na wyższym ciężarze.
+const relatedOf = name => CFG.relatedLifts[name] || CFG.relatedLifts[sourceOf(name)] || [];
+function relatedRaises(e, from, to) {
+  const names = relatedOf(e.name);
+  if (!names.length) return [];
+  return MODEL.exercises.filter(r => r !== e && r.kind === "weight" && !r.uncertain && names.some(n => r.name === n || sourceOf(r.name) === n))
+    .flatMap(r => markRaises(r, r.progress.filter(p => !isExcluded(p.date)).map(p => sessionInfo(r, p)).filter(x => x.full))
+      .filter((x, i) => i === x.k && x.raised != null && x.p.date > from && x.p.date <= to).map(x => ({ e: r, x })));
+}
+// Opis podniesień w ćwiczeniach powiązanych: krótko („podniesiono wiosłowanie”) i ze szczegółami.
+const holdShort = hold => "podniesiono " + [...new Set(hold.map(h => familyOf(h.e.name).toLowerCase()))].join(", ");
+const holdLong = hold => hold.map(h => `${h.e.name} ${nf(h.x.raised, 1)} → ${kg(h.x.kg)}, ${fmtDate(h.x.p.date)}`).join("; ");
 // Wpisy decyzje.md, które przerywają licznik zastoju (dla ćwiczenia albo jego ćwiczenia źródłowego w Hevy), rosnąco po dacie.
 const STALL_DECISION_TYPES = new Set(["ciezar", "kolejnosc", "zasada", "maszyna"]);
 const exDecisions = e => DECISIONS.filter(d => (d.ex === e.name || d.ex === sourceOf(e.name)) && STALL_DECISION_TYPES.has(d.type))
@@ -1875,20 +1971,34 @@ function signalOf(e, s) {
   }
   const { streak, unclean } = s;
   let sig;
-  const almost = unclean === CFG.stallSessions - 1 ? " Jeszcze jeden trening bez czystego wyniku i będzie zastój." : "";
-  if (unclean >= CFG.stallSessions) sig = { st: "stall", label: "■ Zastój", why: `${unclean} ${plTrening(unclean)} z rzędu na ${kg(s.kgNow)} bez czystego wyniku.` };
+  // Budowanie powtórzeń: postęp do celu (suma z CFG.sets serii wobec CFG.sets × cel) i porównanie z poprzednim treningiem na tym ciężarze.
+  // Wzrost sumy zaczyna licznik zastoju od nowa; bez wzrostu trening zwiększa licznik, chyba że podniesiono ćwiczenie powiązane (li.hold).
+  const progress = `${li.sum}/${li.goal} powtórzeń (${li.reps.join("/")}, cel ${CFG.sets} × ${li.target})`, prevF = s.full[s.full.length - 2];
+  const noGrowth = li.building && !li.build ? ` Suma ${li.sum} bez wzrostu wobec ${prevF.sum} (${fmtDate(prevF.p.date)}), ` +
+    (li.hold ? `ale od poprzedniego treningu ${holdShort(li.hold)} (${holdLong(li.hold)}), więc trening nie zwiększa licznika zastoju i go nie zeruje.`
+      : "więc trening zwiększa licznik zastoju.") : "";
+  const almost = noGrowth + (unclean === CFG.stallSessions - 1 ? ` Jeszcze jeden trening bez czystego wyniku${li.newKg ? " i bez wzrostu sumy powtórzeń" : ""} i będzie zastój.` : "");
+  const holds = s.run.filter(x => x.hold && x !== li);
+  if (unclean >= CFG.stallSessions) sig = { st: "stall", label: "■ Zastój", why: `${unclean} ${plTrening(unclean)} z rzędu na ${kg(s.kgNow)} bez czystego wyniku` +
+    (s.run.some(x => x.building) ? ` i bez wzrostu sumy powtórzeń (sumy: ${s.run.filter(x => !x.hold).map(x => x.sum).join(", ")}).` : ".") +
+    (holds.length ? ` Bez zmiany licznika: ${holds.map(x => `${fmtDate(x.p.date)} (${holdShort(x.hold)})`).join(", ")}.` : "") + (li.hold ? noGrowth : "") };
+  else if (li.build) sig = { st: "hold", label: `◐ Budowanie powtórzeń ${li.sum}/${li.goal}`,
+    why: (li.build.prev ? `Suma ${li.sum} wobec ${li.build.prev.sum} (${fmtDate(li.build.prev.p.date)}), +${li.sum - li.build.prev.sum}; ${progress}. Wzrost sumy zeruje licznik zastoju.`
+      : (li.raised != null ? `Po podniesieniu ${kg(li.raised)} → ${kg(li.kg)}: ` : `Nowy ciężar ${kg(li.kg)} od ${fmtDate(li.startDec.date)} (decyzje.md): `) +
+        `${progress}. Zastój dopiero po ${CFG.stallSessions} treningach z rzędu bez wzrostu sumy, licząc ten.`) + almost };
   else if (li.mode === "drop") sig = { st: "down", label: "↘ Zejście w trakcie",
     why: `Start na ${kg(li.kg)}, potem lżej; trening nieczysty na ${kg(li.kg)} (wlicza się do zastoju na tym ciężarze).` + almost };
   else if (!li.clean && li.minReps >= li.target) sig = { st: "hold", label: "● Na cel, bez zapasu",
     why: `Powtórzenia na cel, ale była seria do upadku albo z RPE powyżej ${nf(CFG.cleanMaxRpe, 1)}, więc trening nie liczy się jako czysty.` + almost };
   else if (!li.clean) sig = { st: "down", label: "▼ Poniżej celu", why: `Najsłabsza seria ${li.minReps} z ${li.target}.` + almost };
-  else if (li.lastReps >= li.target + CFG.overTargetReps) sig = { st: "up", ready: streak >= 2 && !(li.lastRpe > CFG.raiseMaxLastRpe), label: "▲ Cel przekroczony", why: `Ostatnia seria ${li.lastReps} przy celu ${li.target}` +
+  else if (li.lastReps >= li.target + CFG.overTargetReps) sig = { st: "up", ready: streak >= 2 && !noReserve(li), label: "▲ Cel przekroczony", why: `Ostatnia seria ${li.lastReps} przy celu ${li.target}` +
     (streak >= 2 ? `; czysto ${streak} ${plTrening(streak)} z rzędu.` : ".") };
-  else if (streak >= 2 && li.lastRpe > CFG.raiseMaxLastRpe) sig = { st: "hold", label: `● Czysto ×${streak}, bez zapasu`,
+  else if (streak >= 2 && noReserve(li)) sig = { st: "hold", label: `● Czysto ×${streak}, bez zapasu`,
     why: `${streak} ${plTrening(streak)} z rzędu czysto na ${kg(s.kgNow)}, ale ostatnia seria z RPE ${nf(li.lastRpe, 1)} (powyżej ${nf(CFG.raiseMaxLastRpe, 1)}): czysto, ale bez zapasu.` };
   else if (streak >= 2) sig = { st: "up", ready: true, label: `▲ Czysto ×${streak}`, why: `${streak} ${plTrening(streak)} z rzędu czysto na ${kg(s.kgNow)}.` };
   else sig = { st: "hold", label: "● Czysto ×1", why: `Pierwszy czysty trening na ${kg(s.kgNow)}.` };
-  return { ...sig, why: [sig.why, ...notes].join(" ") };
+  // info: ostatni trening bez wzrostu sumy po podniesieniu ćwiczenia powiązanego (ℹ pod plakietką).
+  return { ...sig, why: [sig.why, ...notes].join(" "), info: li.hold ? holdShort(li.hold) : null };
 }
 
 // Zmiana planu na rutyny A / B / C: wpis „zasada” dla * w decyzje.md, który wymienia FBW_A / FBW_B / FBW_C.
@@ -1936,7 +2046,10 @@ function variantOf(w) {
   return fly && !pd ? "Klata+" : pd && !fly ? "Plecy+" : null;
 }
 
-const HEAVY = /leg press|shoulder press|chest press/i;   // tylko kontrola rozgrzewek
+// Tylko kontrola rozgrzewek: seria rozgrzewkowa wymagana przed leg pressem, shoulder pressem (stos i talerze) i chest pressem na maszynie.
+// Wolne ciężary (CFG.freeWeight, np. Shoulder Press (Dumbbell) z hotelu) i pozostałe ćwiczenia jej nie wymagają.
+const HEAVY = /leg press|shoulder press|chest press/i;
+const needsWarmup = n => HEAVY.test(n) && !CFG.freeWeight.test(n);
 const COMPOUND = new Set(["zlozone_maszyna", "zlozone_wolne"]);
 const seqOf = w => [...new Set(w.sets.map(s => s.ex))].filter(n => MODEL.exByName.get(n).kind !== "cardio");
 // Grupy do kontroli kolejności wyprowadzone z FAMILIES (blok, kategoria) i PLAN (stałe pozycje, lista ruchów).
@@ -1959,9 +2072,18 @@ const slotsFor = w => ROUTINE_SLOTS[routineOf(w)] || (unknownRoutine(w) ? COMMON
 function orderCheck(w, prev) {
   const seq = seqOf(w), r = {};
   const first = fixedFam("first"), firstUp = fixedFam("firstUpper");
-  const lp = seq.findIndex(n => familyOf(n) === first);
+  // Brzuch nie należy do żadnego bloku: nie liczy się do pozycji leg pressa i nie przerywa bloku nóg ani góry.
+  const blocks = seq.filter(n => blockOf(n) !== "brzuch");
+  const lp = blocks.findIndex(n => familyOf(n) === first);
   const legsDay = seq.some(n => blockOf(n) === "nogi");
-  r.leg = lp === 0 ? { st: "ok" } : lp > 0 ? { st: "bad", t: `${lp + 1}. pozycja` }
+  // Wyjątek (decyzje.md 23.10): cały blok nóg po całym bloku góry, leg press pierwszy wśród nóg. To informacja („exc”), liczona jako zgodna.
+  const at = b => blocks.map((n, i) => blockOf(n) === b ? i : -1).filter(i => i >= 0);
+  const legI = at("nogi"), upI = at("gora");
+  const legsAfterUpper = upI.length > 0 && Math.max(...upI) < legI[0], legsBeforeUpper = !upI.length || legI[legI.length - 1] < upI[0];
+  r.leg = lp === 0 ? { st: "ok" }
+    : lp > 0 && legsAfterUpper && legI[0] === lp ? { st: "exc", t: "wyjątek: nogi po górze", note: "cały blok nóg po bloku góry, leg press pierwszy wśród nóg" }
+    : lp > 0 ? { st: "bad", t: `${lp + 1}. pozycja` + (!legsAfterUpper && !legsBeforeUpper ? ", nogi rozrzucone między ćwiczeniami góry"
+      : legI[0] !== lp ? ", leg press nie pierwszy wśród nóg" : "") }
     : prev && !seqOf(prev).some(n => familyOf(n) === first) ? { st: "bad", t: "brak 2. raz z rzędu" } : { st: "na", t: "pominięte (ok okazjonalnie)" };
   const upper = seq.filter(n => blockOf(n) === "gora");
   const isIso = n => categoryOf(n, w.start) === "izolacja";
@@ -1972,21 +2094,18 @@ function orderCheck(w, prev) {
   r.comp = lateComp < 0 ? { st: "ok" } : { st: "bad", t: `${short(upper[firstIso])} przed ${short(upper[lateComp])}` };
   const absIdx = seq.map((n, i) => blockOf(n) === "brzuch" ? i : -1).filter(i => i >= 0);
   if (ABS_BACK && w.start >= ABS_BACK) {
-    // Od powrotu brzucha: po pierwszej serii leg pressa (jeśli był) i żadna seria brzucha między seriami jednego ćwiczenia złożonego (serie można rozbić).
+    // Od powrotu brzucha: każda seria brzucha (unoszenie kolan, crunch) po leg pressie, jeśli był; crunch na końcu treningu jest więc zgodny.
+    // Warunku „nie w przerwie między seriami ćwiczenia złożonego” nie oceniam: eksport z Hevy zapisuje serie ćwiczenia razem (decyzje.md, korekta 23.10).
     const idx = w.sets.map((s, i) => ({ s, i })).filter(x => x.s.type !== "warmup");
     const absSets = idx.filter(x => blockOf(x.s.ex) === "brzuch");
-    const lpFirst = idx.find(x => familyOf(x.s.ex) === first);
-    const early = lpFirst && absSets.some(x => x.i < lpFirst.i);
-    const inside = [...new Set(idx.map(x => x.s.ex))].filter(n => COMPOUND.has(categoryOf(n, w.start))).find(n => {
-      const own = idx.filter(x => x.s.ex === n);
-      return absSets.some(a => a.i > own[0].i && a.i < own[own.length - 1].i);
-    });
-    r.abs = !absSets.length ? { st: "na", t: "–" } : early ? { st: "bad", t: "przed leg pressem" } : inside ? { st: "bad", t: `w przerwie serii: ${short(inside)}` } : { st: "ok" };
+    const lpLast = idx.filter(x => familyOf(x.s.ex) === first).pop();
+    const early = lpLast && absSets.some(x => x.i < lpLast.i);
+    r.abs = !absSets.length ? { st: "na", t: "–" } : early ? { st: "bad", t: "przed leg pressem" } : { st: "ok" };
   } else r.abs = !absIdx.length ? { st: "na", t: "–" } : seq.slice(absIdx[0]).every(n => blockOf(n) === "brzuch") ? { st: "ok" } : { st: "bad", t: "nie na końcu" };
   const missing = slotsFor(w).filter(sl => !(sl.legs && !legsDay) && !(sl.abs && absOptional(w)) && !seq.some(n => sl.fams.includes(familyOf(n)))).map(sl => sl.label.toLowerCase());
   r.missing = missing.length ? { st: "bad", t: missing.join(", ") } : { st: "ok" };
   if (unknownRoutine(w)) r.missing.note = "nie rozpoznano rutyny po tytule (wymagane ruchy wspólne dla FBW_A, B, C)";
-  const noWarm = seq.filter(n => HEAVY.test(n) && !w.sets.some(s => s.ex === n && s.type === "warmup"));
+  const noWarm = seq.filter(n => needsWarmup(n) && !w.sets.some(s => s.ex === n && s.type === "warmup"));
   r.warm = noWarm.length ? { st: "bad", t: "brak: " + noWarm.map(short).join(", ") } : { st: "ok" };
   // Upadek (albo RPE powyżej CFG.cleanMaxRpe) we wszystkich ćwiczeniach złożonych wg kategorii z FAMILIES / decyzje.md.
   const fail = [...new Set(w.sets.filter(s => COMPOUND.has(categoryOf(s.ex, w.start)) && (s.type === "failure" || s.rpe > CFG.cleanMaxRpe)).map(s => s.ex))];
@@ -2011,6 +2130,9 @@ function renderSignals() {
     const now = targetFor(name, today), up = TARGETS.find(t => t.from > today && targetFor(name, t.from) !== now);
     return `${CFG.sets} × ${now}` + (up ? `<div class="why">od ${esc(fmtDate(up.from))}: ${CFG.sets} × ${targetFor(name, up.from)}</div>` : "");
   };
+  // Ćwiczenie z masą ciała (np. unoszenie kolan, decyzje.md 11.10) nie ma stałego celu powtórzeń, także gdy jest nieużywane.
+  const NO_GOAL = "zapas 1 powt., bez stałego celu";
+  const bodyweight = name => MODEL.exercises.some(x => x.name === name && x.kind === "reps");
   const decCell = name => {
     const d = lastDecision(name);
     return d ? `<span class="why" title="${esc(d.why)}">${esc(fmtDate(d.date))} · ${esc(d.type)}: ${esc(d.change)}</span>` : `<span class="dim">—</span>`;
@@ -2037,7 +2159,7 @@ function renderSignals() {
         .sort((a, b) => lastUse(b) - lastUse(a))[0];
       const lastU = unsure && sessionInfo(unsure, unsure.progress[unsure.progress.length - 1]);
       return [`<tr>${head(0)}<div class="why">${esc(unsure ? unsure.name : r.main)}</div></td>
-        <td class="dim">${lastU ? esc(desc(lastU)) : "—"}</td><td class="nw">${goal(r.main)}</td>
+        <td class="dim">${lastU ? esc(desc(lastU)) : "—"}</td><td class="nw">${bodyweight(r.main) ? NO_GOAL : goal(r.main)}</td>
         <td>${unsure ? `<span class="badge st-old">◌ Brak porównywalnych danych</span><div class="why">Ostatnie treningi w okresie niepewnym (decyzje.md). Sygnały wrócą po pierwszym treningu z rozpoznaną maszyną.</div>`
           : all.length ? `<span class="badge st-old">◌ Nieużywane</span><div class="why">Żadna maszyna z tego ruchu nie była używana w ostatnich ${CFG.signalsActiveDays} dniach (ostatnio ${esc(fmtDate(new Date(lastUse(all[0].e))))}).</div>`
           : `<span class="badge st-old">◌ Brak danych</span>`}</td>
@@ -2048,19 +2170,21 @@ function renderSignals() {
         const sig = repsSignal(s);
         return `<tr>${head(k)}<div class="why">${esc(e.name)}</div></td>
           <td class="dim">${esc(repsDesc(s.li))}</td>
-          <td class="nw">zapas 1 powt., bez stałego celu</td>
+          <td class="nw">${NO_GOAL}</td>
           <td><span class="badge st-${sig.st}">${esc(sig.label)}</span><div class="why">${esc(sig.why)}</div></td>
           <td>${decCell(e.name)}</td></tr>`;
       }
       const sig = signalOf(e, s), li = s.li;
-      if (sig.ready) ready.push({ e, s, rpe: s.lf.rpe });
+      // Kolejność listy „gotowe” (decyzje.md 22.10): średnie RPE wszystkich serii roboczych ostatniego ocenianego treningu (bez rozgrzewkowych,
+      // także serie lżejsze i testowa), nie tylko serii na ciężarze roboczym.
+      if (sig.ready) ready.push({ e, s, rpe: mean(s.lf.work.filter(x => x.rpe != null).map(x => x.rpe)) });
       // Ostatni trening nieoceniany (skrócony albo z podbijaniem): pokazuję też ostatni pełny.
       const skipped = !li.full && s.lf !== li;
       const extra = skipped && li.mode === "normal" ? `Trening z ${fmtDate(li.p.date)} skrócony (${li.work.length} ${plSerie(li.work.length)}), oceniam ostatni pełny.` : "";
       return `<tr>${head(k)}<div class="why">${esc(e.name)}</div></td>
         <td class="dim">${esc(desc(li))}${skipped ? `<div class="why">ostatni pełny: ${esc(desc(s.lf))}</div>` : ""}</td>
         <td class="nw">${goal(e.name)}</td>
-        <td><span class="badge st-${sig.st}">${esc(sig.label)}</span><div class="why">${esc([sig.why, extra].filter(Boolean).join(" "))}</div></td>
+        <td><span class="badge st-${sig.st}">${esc(sig.label)}</span>${sig.info ? `<div class="rel-info">ℹ ${esc(sig.info)}</div>` : ""}<div class="why">${esc([sig.why, extra].filter(Boolean).join(" "))}</div></td>
         <td>${decCell(e.name)}</td>
       </tr>`;
     });
@@ -2070,9 +2194,12 @@ function renderSignals() {
     `<div class="warn" style="margin-bottom:12px"><span class="ic">⚠</span><span>${esc(x.text)}</span></div>`).join("");
   // Gotowe do podniesienia (czysto ×2+ i ostatnia seria w granicach CFG.raiseMaxLastRpe): od największego zapasu, czyli od najniższego średniego RPE
   // serii roboczych ostatniego treningu (bez RPE na końcu). To informacja, nie plan.
+  // Nad listą limit z decyzje.md (CFG.maxRaisesPerSession); dashboard niczego nie wybiera.
   ready.sort((a, b) => (a.rpe ?? Infinity) - (b.rpe ?? Infinity));
-  $("#signals-ready").innerHTML = ready.length ? `<div class="info" style="margin-bottom:12px"><span class="ic ok">▲</span><span><b>Gotowe do podniesienia</b> (od największego zapasu): ` +
-    esc(ready.map(({ e, s, rpe }) => `${short(e.name)} (czysto ×${s.streak}, ${rpe != null ? `śr. RPE ${nf(rpe, 1)}` : "bez RPE"})`).join(", ")) + `.</span></div>` : "";
+  const maxN = CFG.maxRaisesPerSession;
+  $("#signals-ready").innerHTML = ready.length ? `<div class="info ready" style="margin-bottom:12px"><span class="ic ok">▲</span><div><b>Gotowe do podniesienia</b> (od największego zapasu)` +
+    `<p class="ready-note">Najwyżej ${maxN} ${plPodniesienie(maxN)} na trening, wybór należy do Ciebie.</p><ul>` +
+    ready.map(({ e, s, rpe }) => `<li>${esc(`${short(e.name)} (czysto ×${s.streak}, ${rpe != null ? `śr. RPE ${nf(rpe, 1)}` : "bez RPE"})`)}</li>`).join("") + `</ul></div></div>` : "";
   $("#signals-rules").textContent =`Każdy trening oceniany względem celu obowiązującego w jego dniu. ` +
     `Czysto = co najmniej ${CFG.sets} serie robocze na jednym ciężarze, wszystkie na cel, bez upadku i z RPE najwyżej ${nf(CFG.cleanMaxRpe, 1)}. ` +
     `Podbijanie w trakcie (mniej niż ${CFG.sets} serie na najwyższym ciężarze) to trening przejściowy: nie liczy się do „czysto ×N” ani do zastoju na żadnym ciężarze i nie przerywa serii; ocena nowego ciężaru zaczyna się od kolejnego pełnego treningu. ` +
@@ -2080,8 +2207,14 @@ function renderSignals() {
     `Jedna cięższa seria po pełnych seriach to seria testowa. ` +
     `Cel przekroczony = ostatnia seria o ${CFG.overTargetReps} lub więcej powt. ponad cel. ` +
     `Gotowe do podniesienia = czysto co najmniej ×2 i ostatnia seria najnowszego treningu z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)}; przy wyższym RPE sygnał to „czysto, ale bez zapasu”. ` +
-    `Wg zasady z decyzje.md najwyżej ${CFG.maxRaisesPerSession} podniesienia na trening, pierwszeństwo ma ćwiczenie z największym zapasem (najniższe RPE); lista nad tabelą jest w tej kolejności i jest tylko informacją. ` +
+    `Warunek RPE obowiązuje od ${fmtDate(RAISE_RPE_FROM)} (CFG.raiseRpeFrom); gdy najnowszy trening jest wcześniejszy, wystarczą 2 czyste treningi z rzędu. ` +
+    `Wg zasady z decyzje.md najwyżej ${maxN} ${plPodniesienie(maxN)} na trening; lista nad tabelą jest od największego zapasu, czyli od najniższego średniego RPE wszystkich serii roboczych (bez rozgrzewkowych) ostatniego ocenianego treningu, i jest tylko informacją: wybór należy do Ciebie. ` +
     `Zastój = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego wyniku. ` +
+    `Budowanie powtórzeń: po podniesieniu (ciężar roboczy wyższy niż w poprzednim pełnym treningu tej maszyny, rozpoznawany z danych, notatka nie jest potrzebna) ` +
+    `pierwszy trening na nowym ciężarze poniżej celu i każdy kolejny poniżej celu z większą sumą powtórzeń niż poprzedni trening na tym ciężarze; postęp jako suma / ${CFG.sets} × cel. ` +
+    `Na nowym ciężarze poniżej celu zastój = suma powtórzeń bez wzrostu przez ${CFG.stallSessions} treningi z rzędu, licząc trening, z którym porównuję (np. 23, 23, 23); każdy wzrost sumy zeruje licznik. ` +
+    `Trening bez wzrostu sumy nie zwiększa licznika i go nie zeruje, jeśli od poprzedniego treningu tego ćwiczenia podniesiono ciężar w ćwiczeniu powiązanym (ℹ przy sygnale, lista w CFG.relatedLifts: ` +
+    Object.entries(CFG.relatedLifts).map(([k, v]) => `${k} ← ${v.join(", ")}`).join("; ") + `; Chest Press (Machine) = obie maszyny, talerze i stos). ` +
     `Treningi skrócone, dni oznaczone w decyzje.md jako wyjątek i maszyny nieużywane od ponad ${CFG.signalsActiveDays} dni pomijam. RPE traktuję pomocniczo. ` +
     `Ćwiczenia z masą ciała (np. unoszenie kolan) nie mają stałego celu: suma powtórzeń z serii roboczych porównana z poprzednim treningiem tego ćwiczenia ` +
     `(▲ lepiej, ● tak samo, ▼ gorzej), bez zastojów i podniesień ciężaru. Tag przy ruchu = rutyny, w których występuje (gdy nie we wszystkich).`;
@@ -2122,6 +2255,7 @@ function renderOrder() {
     return { w, c: rules.map(rl => rl.from && w.start < rl.from ? { st: "pre", t: `Przed wprowadzeniem zasady (od ${fmtDate(rl.from)}, decyzje.md)` } : r[rl.key]) };
   }).reverse();
   const cell = c => c.st === "ok" ? `<span class="ok">✓</span>` : c.st === "na" ? `<span class="na">${esc(c.t)}</span>`
+    : c.st === "exc" ? `<span class="exc">ℹ ${esc(c.t)}</span>`
     : c.st === "pre" ? `<span class="na" data-tip="${esc(c.t)}">—<span class="vh"> ${esc(c.t.toLowerCase())}</span></span>` : `<span class="bad">✗ ${esc(c.t)}</span>`;
   const tr = ({ w, c }) => {
     const v = variantOf(w);
@@ -2138,14 +2272,20 @@ function renderOrder() {
   $("#order-more").innerHTML = older.length ? toggleBtn("order-older", "btn", `Pokaż starsze (${older.length})`, `Ukryj starsze (${older.length})`) : "";
 
   // Zgodność we wszystkich treningach (także schowanych): ✓ wśród ocenionych; bez „—” sprzed zasady i bez ocen neutralnych.
+  // Dozwolony wyjątek („exc”) liczy się jako zgodny i jest dopisany przy zasadzie.
   $("#order-sum").innerHTML = rules.map((rl, k) => {
-    const ok = rows.filter(x => x.c[k].st === "ok").length, n = rows.filter(x => x.c[k].st === "ok" || x.c[k].st === "bad").length;
-    return `<li><span class="lbl">${esc(rl.label)}${rl.from ? ` <span class="dim">(od ${esc(fmtDate(rl.from))})</span>` : ""}</span>` +
+    const exc = rows.filter(x => x.c[k].st === "exc").length;
+    const ok = rows.filter(x => x.c[k].st === "ok").length + exc, n = rows.filter(x => ["ok", "bad", "exc"].includes(x.c[k].st)).length;
+    const extra = [rl.from ? `od ${fmtDate(rl.from)}` : "", exc ? `wyjątki: ${exc}` : ""].filter(Boolean).join(" · ");
+    return `<li><span class="lbl">${esc(rl.label)}${extra ? ` <span class="dim">(${esc(extra)})</span>` : ""}</span>` +
       `<b>${n ? `${ok}/${n}` : "—"}</b></li>`;
   }).join("");
   const dated = rules.filter(rl => rl.from), undated = rules.filter(rl => !rl.from);
   $("#help-order").innerHTML = `<p>Zasady z założeń: leg press pierwszy, shoulder press pierwszy w bloku góry, złożone przed izolacją, brzuch (do ${ABS_BACK ? esc(fmtDate(new Date(ABS_BACK - 864e5))) : "—"} na końcu; ${ABS_BACK ? "od " + esc(fmtDate(ABS_BACK)) : "później"}
-      po leg pressie i nie w przerwie między seriami ćwiczenia złożonego), nic nie pominięte, rozgrzewki przed ciężkimi ćwiczeniami, bez upadku w ćwiczeniach złożonych. ✓ = zgodnie, ✗ = niezgodnie (z powodem), szary tekst = nie dotyczy.</p>
+      każda seria brzucha po leg pressie, crunch na końcu treningu też jest zgodny; warunku „nie w przerwie między seriami ćwiczenia złożonego” nie oceniam, bo eksport z Hevy zapisuje serie ćwiczenia razem), nic nie pominięte,
+      seria rozgrzewkowa tylko przed leg pressem, shoulder pressem (stos i talerze) i chest pressem na maszynie (przy innych ćwiczeniach jej brak nie jest błędem), bez upadku w ćwiczeniach złożonych. ✓ = zgodnie, ✗ = niezgodnie (z powodem), ℹ = dozwolony wyjątek (liczy się jako zgodny), szary tekst = nie dotyczy.</p>
+    <p>Leg press 1.: dozwolony wyjątek (ℹ), gdy cały blok nóg (leg press, leg extension, leg curl) stoi po całym bloku góry, a leg press jest pierwszy wśród nóg (decyzje.md).
+      ✗, gdy ćwiczenia nóg są rozrzucone między ćwiczeniami góry albo leg press nie jest pierwszy wśród nóg. Brzuch nie należy do żadnego bloku: nie przerywa bloku i nie liczy się do pozycji leg pressa.</p>
     <p>Plan ustalał się stopniowo. ${dated.length ? `Dla zasad z datą wprowadzenia w decyzje.md (${dated.map(rl => `${esc(rl.label.toLowerCase())}: od ${esc(fmtDate(rl.from))}`).join("; ")})
       treningi wcześniejsze mają szare „—” i nie liczą się do podsumowania zgodności. ` : ""}${undated.length ? `Pozostałe zasady nie mają daty wprowadzenia,
       więc oceniam wszystkie treningi (starsze mogą ich nie spełniać).` : ""}</p>
@@ -2165,17 +2305,20 @@ function renderPlateaus() {
   const stalls = ex.filter(x => x.s.unclean >= CFG.stallSessions).sort((a, b) => b.s.unclean - a.s.unclean);
   // Przyczyna przeanalizowana: zastój sprzed wpisu w decyzje.md, po decyzji jeszcze bez nowego zastoju.
   const analyzed = ex.filter(x => x.s.analyzed && x.s.unclean < CFG.stallSessions);
-  const overdue = ex.filter(x => x.s.streak >= CFG.overdueSessions && !x.dec && !(x.s.lf.lastRpe > CFG.raiseMaxLastRpe));
+  const overdue = ex.filter(x => x.s.streak >= CFG.overdueSessions && !x.dec && !noReserve(x.s.lf));
   const watch = ex.filter(x => x.s.unclean === CFG.stallSessions - 1 && !x.dec).map(x => x.e.name);
 
+  // Powtórzenia w tabeli zastoju; trening bez zmiany licznika (podniesione ćwiczenie powiązane) z dopiskiem ℹ.
+  const repsCell = x => `<b>${esc(x.reps.join("/"))}</b> <span class="dim">z ${x.target}</span>` +
+    (x.hold ? `<div class="rel-info">ℹ ${esc(holdShort(x.hold))}, licznik bez zmian</div>` : "");
   const runTable = (runs, name) => `<div class="tbl"><table><thead><tr><th>Data</th><th>Powtórzenia</th><th>Pozycja</th><th>Przerwa</th><th>RPE</th></tr></thead><tbody>${runs.map(x => {
     const w = x.p.workout, wi = ws.indexOf(w), n = seqOf(w).length, pos = seqOf(w).indexOf(name) + 1;
     const rest = wi > 0 ? dayDiff(ws[wi - 1].start, w.start) : null;
-    return `<tr><td>${esc(fmtDate(x.p.date))}</td><td><b>${esc(x.reps.join("/"))}</b> <span class="dim">z ${x.target}</span></td><td>${pos}. z ${n}</td>
+    return `<tr><td>${esc(fmtDate(x.p.date))}</td><td>${repsCell(x)}</td><td>${pos}. z ${n}</td>
       <td>${rest != null ? `${rest} ${plDni(rest)}` : "–"}</td><td>${x.rpe != null ? esc(nf(x.rpe, 1)) : "–"}</td></tr>`;
   }).join("")}</tbody></table></div>`;
   let html = analyzed.map(({ e, s }) => {
-    const { d, before } = s.analyzed, runs = s.full.filter(x => x.kg === s.kgNow && x.p.date < d.date).slice(-before);
+    const { d, before, runs } = s.analyzed;
     return `<div class="plateau">
       <div><div class="name">${esc(e.name)} <span class="badge st-old">◆ Przyczyna przeanalizowana</span></div>
         <div class="det">${esc(fmtDate(d.date))} · ${esc(d.type)}: ${esc(d.change)}.</div>
@@ -2186,12 +2329,12 @@ function renderPlateaus() {
     </div>`;
   }).join("");
   html += stalls.map(({ e, s }) => {
-    const runs = s.full.slice(-s.unclean);
+    const runs = s.run;   // treningi bieżącego licznika zastoju (od ostatniego wzrostu sumy przy budowaniu)
     const pos = runs.map(x => seqOf(x.p.workout).indexOf(e.name) + 1);
     const rows = runs.map((x, k) => {
       const w = x.p.workout, wi = ws.indexOf(w), n = seqOf(w).length;
       const rest = wi > 0 ? dayDiff(ws[wi - 1].start, w.start) : null;
-      return `<tr><td>${esc(fmtDate(x.p.date))}</td><td><b>${esc(x.reps.join("/"))}</b> <span class="dim">z ${x.target}</span></td><td>${pos[k]}. z ${n}</td>
+      return `<tr><td>${esc(fmtDate(x.p.date))}</td><td>${repsCell(x)}</td><td>${pos[k]}. z ${n}</td>
         <td>${rest != null ? `${rest} ${plDni(rest)}` : "–"}</td><td>${x.rpe != null ? esc(nf(x.rpe, 1)) : "–"}</td></tr>`;
     }).join("");
     const hints = [];
@@ -2203,7 +2346,8 @@ function renderPlateaus() {
     hints.push("Sprawdź też technikę i regenerację: sen i odstęp od poprzedniego treningu (kolumna „Przerwa”).");
     // Zastój po wcześniejszej decyzji: licznik liczony od decyzji, to nowy zastój.
     const head = `<div class="name">${esc(e.name)} <span class="badge st-stall">■ Zastój</span></div>
-        <div class="det">${s.unclean} ${plTrening(s.unclean)} z rzędu na ${esc(kg(s.kgNow))} bez czystego ${CFG.sets} × cel (cel z dnia treningu).</div>` +
+        <div class="det">${s.unclean} ${plTrening(s.unclean)} z rzędu na ${esc(kg(s.kgNow))} bez czystego ${CFG.sets} × cel (cel z dnia treningu)` +
+          `${runs.some(x => x.building) ? `; budowanie powtórzeń bez wzrostu sumy (sumy: ${esc(runs.filter(x => !x.hold).map(x => x.sum).join(", "))})` : ""}.</div>` +
       (s.analyzed ? `<div class="det dim">Nowy zastój po decyzji z ${esc(fmtDate(s.analyzed.d.date))} (${esc(s.analyzed.d.type)}: ${esc(s.analyzed.d.change)}).</div>` : "");
     const side = `<b style="color:var(--text-primary)">Możliwe przyczyny</b><ul>${hints.map(h => `<li>${esc(h)}</li>`).join("")}</ul>`;
     return `<div class="plateau">
@@ -2223,8 +2367,11 @@ function renderPlateaus() {
   if (watch.length) html += `<p class="only-once">Do obserwacji (${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego ${CFG.sets} × cel): ${esc(watch.map(short).join(", "))}.</p>`;
   $("#plateaus").innerHTML = html;
   $("#help-plateaus").innerHTML = `<p><b>Zastój</b> = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego ${CFG.sets} × cel (cel z dnia treningu).
-      Najpierw szukamy przyczyny, potem zmieniamy ciężar lub objętość.</p>
-    <p><b>Zaległe podniesienie</b> = co najmniej ${CFG.overdueSessions} czyste treningi z rzędu na tym samym ciężarze i ostatnia seria najnowszego treningu z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)} (czysto, ale bez zapasu nie jest zaległe). <b>Do obserwacji</b> = ${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego wyniku.
+      Najpierw szukamy przyczyny, potem zmieniamy ciężar lub objętość. Po podniesieniu ciężaru (wciąż poniżej celu) zastój = suma powtórzeń
+      bez wzrostu przez ${CFG.stallSessions} treningi z rzędu, licząc trening, z którym porównuję (np. 23, 23, 23); każdy wzrost sumy zeruje licznik
+      (25, 25, 27, 27, 27 = zastój dopiero po trzecim 27). Trening bez wzrostu sumy po podniesieniu ciężaru w ćwiczeniu powiązanym (np. biceps po wiosłowaniu,
+      CFG.relatedLifts) nie zwiększa licznika i go nie zeruje (ℹ w tabeli).</p>
+    <p><b>Zaległe podniesienie</b> = co najmniej ${CFG.overdueSessions} czyste treningi z rzędu na tym samym ciężarze i ostatnia seria najnowszego treningu z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)} (czysto, ale bez zapasu nie jest zaległe; warunek RPE od ${esc(fmtDate(RAISE_RPE_FROM))}, wcześniej same czyste treningi). <b>Do obserwacji</b> = ${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego wyniku.
       Jeśli ostatni trening wypadł w tygodniu utrwalenia z decyzje.md (podniesienia wstrzymane), wiersz nazywa się „Tydzień utrwalenia” i nie jest ostrzeżeniem.</p>
     <p><b>Przyczyna przeanalizowana</b>: po początku zastoju jest wpis w decyzje.md dla tego ćwiczenia (ciezar, kolejnosc, zasada albo maszyna).
       Treningi sprzed decyzji nie liczą się już do zastoju; licznik startuje od dnia decyzji. Jeśli po decyzji znów ${CFG.stallSessions} pełne treningi
