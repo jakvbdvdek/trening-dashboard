@@ -284,6 +284,7 @@ details summary { list-style: none; }
 .stat .label { color: var(--text-secondary); font-size: 14px; }
 .stat .value { font-size: 19px; font-weight: 650; line-height: 1.3; }
 .stat .note { color: var(--text-muted); font-size: 14px; }
+.stat .info-note { color: var(--text-secondary); margin-top: 4px; }   /* zaplanowany wyjątek od limitu (decyzje.md): ikona ℹ i tekst, nie ostrzeżenie */
 
 footer { color: var(--text-muted); font-size: 14px; margin-top: 20px; }
 
@@ -1116,7 +1117,10 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
   - `kategoria` z Ćwiczenie = `*`: nowe cele, np. „zlozone_maszyna 3 × 10, izolacja 3 × 12”.
   - `kategoria` dla pojedynczego ćwiczenia: zaczyna się od nazwy kategorii (`zlozone_maszyna`, `izolacja`, `brzuch`, `zlozone_wolne`). Dopisujemy go **tylko wtedy, gdy ćwiczenie zmienia kategorię**; od podanej daty nadpisuje przypisanie z `FAMILIES` w dashboardzie.
   - `ciezar` zaczynający się od „<N> kg” ze słowem „budowanie”, np. „6 kg, budowanie do 3 × 12”: od daty wpisu pierwszy ciąg pełnych treningów na N kg to nowy ciężar, więc treningi poniżej celu są oceniane jako budowanie powtórzeń, także gdy z danych nie widać podniesienia (np. pierwszy trening ćwiczenia ze zmianą ciężaru w trakcie).
-- Zasady liczenia z wpisów `zasada` dla `*` z 16.10 (RPE ostatniej serii, limit podniesień), 22.10 (kolejność listy „gotowe”) i 25.10 (budowanie powtórzeń, zastój przy budowaniu) dashboard bierze z `CFG` w szablonie (`raiseMaxLastRpe`, `raiseRpeFrom`, `maxRaisesPerSession`, `relatedLifts`) i z kodu, nie z treści wpisu: zmiana takiej zasady wymaga też zmiany `CFG`.
+  - `wyjatek` z Ćwiczenie = `*`: dzień z kolumny Data (albo okres do daty końca) wyłączony z oceny progresji (sygnały, zastoje, karty progresu). Wpis ze słowami „limit … treningów w tygodniu”, np. „Zaplanowany wyjątek od limitu 3 treningów w tygodniu do RRRR-MM-DD”, to zaplanowany wyjątek od limitu treningów w tygodniu: tydzień (od poniedziałku do niedzieli, jak w dashboardzie) ponad limitem, którego wszystkie treningi są w okresie wpisu, dashboard pokazuje jako informację ℹ zamiast ostrzeżenia. Taki wpis nie wyłącza treningów z oceny progresji.
+  - `zasada` z Ćwiczenie = `*`, której treść wymienia FBW_A / FBW_B / FBW_C: zmiana planu na rutyny; najwcześniejsza Data takiego wpisu to początek rozpoznawania rutyn po tytule treningu (kontrola kolejności), a wpis jest znacznikiem na kartach progresu. Tekst „trening DD.MM (tytuł) = FBW_X” (rok z Daty) przypisuje rutynę FBW_X treningowi z tego dnia niezależnie od tytułu w Hevy.
+- **Data końca (każdy typ):** „do RRRR-MM-DD” w kolumnie Zmiana (małymi literami, data nie wcześniejsza niż Data) oznacza, że wpis obowiązuje od Daty do tej daty włącznie. Dashboard bierze ją pod uwagę przy wpisach opisujących stan w czasie: `wyjatek`, `kategoria`, `alias`, `maszyna` z podziałem według notatki oraz `zasada` „Brzuch poza treningiem…” i „Tydzień utrwalenia…”. Bez daty końca `wyjatek` dotyczy tylko dnia z kolumny Data, a pozostałe wpisy obowiązują od Daty bezterminowo. Przy wpisach-zdarzeniach (np. zmiana ciężaru, kolejność, decyzja przerywająca licznik zastoju) i okresach maszyn z własnym zapisem („przed RRRR-MM-DD”, „Okres niepewny do RRRR-MM-DD”) data końca jest tylko informacją.
+- Zasady liczenia z wpisów `zasada` dla `*` z 16.10 (RPE ostatniej serii, limit podniesień), 22.10 (kolejność listy „gotowe”), 25.10 (budowanie powtórzeń, zastój przy budowaniu, rozgrzewka) i 27.10 (wzrost sumy wobec najlepszej sumy na ciężarze, kolejność ćwiczenia powiązanego w tym samym treningu) dashboard bierze z `CFG` w szablonie (`raiseMaxLastRpe`, `raiseRpeFrom`, `maxRaisesPerSession`, `relatedLifts`, `buildBestFrom`, `relatedOrderFrom`) i z kodu, nie z treści wpisu: zmiana takiej zasady wymaga też zmiany `CFG`.
 - W tekście komórek nie używamy znaku `|`.
 - Nowe wpisy dopisujemy na końcu tabeli. Starych nie edytujemy; jeśli coś się zmienia, dopisujemy nowy wpis zaczynający się od „Korekta wpisu z RRRR-MM-DD:”.
 
@@ -1152,6 +1156,12 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-10-25 | Preacher Curl (Machine) | ciezar | 25 → 32 kg; start 3 × 8, dobijanie do 3 × 12 | Na tej maszynie po 25 kg następny krok to 32 kg; skok jest duży, więc najpierw mniej powtórzeń |
 | 2026-10-25 | * | zasada | Korekta wpisu z 2026-10-25 (budowanie powtórzeń): na nowym ciężarze poniżej celu kategorii zastój = suma powtórzeń nie rośnie przez 3 treningi z rzędu, licząc trening, z którym porównujemy (np. 23, 23, 23); każdy wzrost sumy zeruje licznik (25, 25, 27, 27, 27 → zastój dopiero po trzecim 27; 25, 25, 27, 27 → bez zastoju). Wyjątek: trening bez wzrostu sumy nie zwiększa licznika i go nie zeruje, jeśli od poprzedniego treningu tego ćwiczenia podniesiono ciężar w ćwiczeniu powiązanym (lista w CFG.relatedLifts i w założeniach, sekcja 7) | Dotychczasowy licznik pomijał treningi ze wzrostem sumy, więc dawał zastój mimo wzrostu w środku (np. 25, 25, 27, 27, 27); podniesienie ćwiczenia, które męczy te same mięśnie (np. wiosłowanie przed bicepsem), tłumaczy brak wzrostu |
 | 2026-10-14 | Lateral Raise (Dumbbell) | ciezar | 6 kg, budowanie do 3 × 12 | Pierwszy trening wznosów 14.10: start na 5 kg, od 2. serii 6 kg, przy których Jakub zostaje; z danych nie widać podniesienia, bo wcześniej nie było pełnego treningu na niższym ciężarze |
+| 2026-10-22 | Shoulder Press (Machine Plates) | maszyna | Zamiennik Seated Shoulder Press (Machine), gdy główna maszyna jest zajęta; osobny ciężar (osobna linia i osobny sygnał w ruchu „Wyciskanie nad głowę”); w ćwiczeniach powiązanych (CFG.relatedLifts) liczy się tak jak maszyna na stos | Główna maszyna na stos bywa zajęta (22.10, 27.10); maszyna na talerze ma inne ciężary, ale męczy te same mięśnie |
+| 2026-10-25 | * | zasada | Rozgrzewka: jedna lekka seria tylko przed leg pressem, shoulder pressem (maszyna na stos i na talerze) i chest pressem; przy innych ćwiczeniach brak rozgrzewki nie jest błędem. Bez daty wprowadzenia: kontrola kolejności ocenia tak całą historię | Zasada ustalona 25.10 (zlecenie z 25.10, kolumna „Rozgrzewka”); wpis dopisany 28.10, bo wcześniej była tylko w założeniach (sekcja 5) i w kodzie |
+| 2026-10-27 | * | zasada | Budowanie powtórzeń: wzrost sumy powtórzeń liczony względem najlepszej sumy na danym ciężarze, nie poprzedniego treningu; np. 24, 22, 23: trening z 23 nie jest wzrostem i nie zeruje licznika, więc po 23 zastój. Treningi przed 2026-10-27 liczone dotychczasową regułą (CFG.buildBestFrom) | Decyzja Jakuba (sprawa do decyzji z 25.10): odrobienie wcześniejszego spadku (22 → 23 po 24) nie jest postępem na tym ciężarze |
+| 2026-10-27 | * | zasada | Wyjątek dla ćwiczeń powiązanych (CFG.relatedLifts): podniesienie ćwiczenia powiązanego w tym samym treningu wstrzymuje licznik zastoju tylko wtedy, gdy ćwiczenie powiązane było zrobione wcześniej w tym treningu (kolejność z CSV); podniesienie w treningach pomiędzy dwoma treningami danego ćwiczenia działa jak dotąd. Treningi przed 2026-10-27 liczone dotychczasową regułą (CFG.relatedOrderFrom) | Decyzja Jakuba (sprawa do decyzji z 25.10): podniesienie zrobione po danym ćwiczeniu nie mogło wpłynąć na jego wynik |
+| 2026-10-11 | * | zasada | plan FBW A/B/C od 11.10; trening 11.10 (FBW_Plecy+) = FBW_A; przegląd planu po 4 tygodniach | Trening 11.10 miał już zestaw ćwiczeń FBW_A, tytułu w Hevy nie zmieniamy; ostatni trening na obecnym zestawie ćwiczeń: 5.11 |
+| 2026-10-28 | * | zasada | limit 3 treningów w tygodniu pn–nd, cała historia; niedziela to dzień pierwszego treningu cyklu nd / wt / czw | Wpis wyjątku z 25.10 liczył tydzień od niedzieli; tydzień liczymy pn–nd |
 </script>
 <script>
 "use strict";
@@ -1178,6 +1188,12 @@ const CFG = {
     "Chest Fly (Machine)": ["Chest Press (Machine)"],
     "Leg Extension (Machine)": ["Leg Press (Machine)"],
   },
+  // Budowanie powtórzeń (decyzje.md 27.10): od tego dnia wzrost sumy = suma większa niż najlepsza dotąd na tym ciężarze (24, 22, 23 → 23 to nie wzrost);
+  // treningi wcześniejsze porównuję z poprzednim treningiem na tym ciężarze.
+  buildBestFrom: "2026-10-27",
+  // Ćwiczenia powiązane (decyzje.md 27.10): od tego dnia podniesienie powiązanego ćwiczenia w tym samym treningu liczy się tylko, gdy było ono
+  // w treningu wcześniej (kolejność z CSV); podniesienia w treningach pomiędzy dwoma treningami ćwiczenia bez zmian. Wcześniej kolejność bez znaczenia.
+  relatedOrderFrom: "2026-10-27",
   overdueSessions: 3,      // „zaległe podniesienie”: tyle czystych treningów z rzędu na tym samym ciężarze
   raiseMaxLastRpe: 9,      // gotowe do podniesienia: czysto ×2+ i ostatnia seria najnowszego treningu z RPE najwyżej tyle (wyżej: „czysto, ale bez zapasu”)
   raiseRpeFrom: "2026-10-16",   // warunek raiseMaxLastRpe od tego dnia (zasada z decyzje.md); dla wcześniejszych treningów gotowość = same 2 czyste treningi z rzędu
@@ -1229,9 +1245,9 @@ const FAMILIES = [
 ];
 const familyOf = name => (FAMILIES.find(([, re]) => re.test(name)) || [name])[0];
 const blockOf = name => (FAMILIES.find(([, re]) => re.test(name)) || [])[3] || null;
-// Kategoria w dniu `date`: wpis „kategoria” dla tego ćwiczenia w decyzje.md (zmiana kategorii) nadpisuje FAMILIES.
+// Kategoria w dniu `date`: wpis „kategoria” dla tego ćwiczenia w decyzje.md (zmiana kategorii, od Daty do daty końca) nadpisuje FAMILIES.
 const categoryOf = (name, date = new Date()) => {
-  const ov = DECISIONS.filter(d => d.type === "kategoria" && d.ex === name && d.date <= date).sort((a, b) => a.date - b.date).pop();
+  const ov = DECISIONS.filter(d => d.type === "kategoria" && d.ex === name && inForce(d, date)).sort((a, b) => a.date - b.date).pop();
   if (ov) return ov.change.split(/[\s,;]/)[0];
   const f = FAMILIES.find(([, re]) => re.test(name));
   const cat = f ? f[2] : muscleOf(name) === "Brzuch" ? "brzuch" : "izolacja";
@@ -1281,25 +1297,39 @@ const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 // ---------- decyzje.md (tabela: Data | Ćwiczenie | Typ | Zmiana | Powód) ----------
+// Data końca (każdy typ): „do RRRR-MM-DD” w kolumnie Zmiana (małe „do”, data nie wcześniejsza niż Data) = wpis obowiązuje od Daty
+// do tej daty włącznie. `until`: dzień końca, `end`: pierwszy dzień po nim (granica wyłączna); bez daty końca oba null.
 function parseDecisions(md) {
   const rows = [];
+  const day = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
   for (const line of md.split(/\r?\n/)) {
     const c = line.trim().replace(/^\||\|$/g, "").split("|").map(x => x.trim());
     if (c.length < 5 || !/^\d{4}-\d{2}-\d{2}$/.test(c[0])) continue;
-    const [y, m, d] = c[0].split("-").map(Number);
-    rows.push({ date: new Date(y, m - 1, d), ex: c[1], type: c[2], change: c[3], why: c[4] });
+    const date = day(c[0]);
+    const until = [...c[3].matchAll(/(?<![\p{L}\d])do\s+(\d{4}-\d{2}-\d{2})(?!\d)/gu)].map(m => day(m[1])).find(u => u >= date) || null;
+    rows.push({ date, ex: c[1], type: c[2], change: c[3], why: c[4], until,
+      end: until && new Date(until.getFullYear(), until.getMonth(), until.getDate() + 1) });
   }
   return rows;
 }
 const DECISIONS = parseDecisions($("#decyzje-data").textContent);
-// Historia celów powtórzeń: baza z CFG, potem każdy wpis „kategoria” dla całego planu (*),
-// np. „zlozone_maszyna 3 × 10, izolacja 3 × 12”. Kategorie niewymienione we wpisie zachowują poprzedni cel.
-const TARGETS = [{ from: new Date(0), reps: { ...CFG.baseTargets } }];
-for (const d of DECISIONS.filter(d => d.type === "kategoria" && d.ex === "*").sort((a, b) => a.date - b.date)) {
-  const reps = { ...TARGETS[TARGETS.length - 1].reps };
-  for (const m of d.change.matchAll(/(\w+)\s+\d+\s*[×x]\s*(\d+)/g)) if (m[1] in reps) reps[m[1]] = +m[2];
-  TARGETS.push({ from: d.date, reps });
-}
+// Wpis obowiązuje w dniu `date`: od Daty do daty końca włącznie. Bez daty końca bezterminowo, a „wyjatek” tylko w dniu Daty.
+// Dotyczy wpisów opisujących stan w czasie (wyjatek, kategoria, alias, podział maszyny wg notatki, okresy z wpisów „zasada”);
+// wpisy-zdarzenia (np. zmiana ciężaru, decyzja przerywająca licznik zastoju) liczą się od Daty jak dotąd.
+const inForce = (d, date) => date >= d.date &&
+  date < (d.end || (d.type === "wyjatek" ? new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate() + 1) : Infinity));
+// Historia celów powtórzeń: baza z CFG, potem każdy wpis „kategoria” dla całego planu (*), np. „zlozone_maszyna 3 × 10, izolacja 3 × 12”,
+// od Daty (do daty końca, jeśli jest). Kategorie niewymienione we wpisie zachowują poprzedni cel. Kolejne pozycje TARGETS zaczynają się
+// w dniach, od których zmienia się zestaw obowiązujących wpisów (Data albo dzień po dacie końca).
+const TARGET_DECS = DECISIONS.filter(d => d.type === "kategoria" && d.ex === "*").sort((a, b) => a.date - b.date);
+const targetsOn = date => {
+  const reps = { ...CFG.baseTargets };
+  for (const d of TARGET_DECS.filter(d => inForce(d, date)))
+    for (const m of d.change.matchAll(/(\w+)\s+\d+\s*[×x]\s*(\d+)/g)) if (m[1] in reps) reps[m[1]] = +m[2];
+  return reps;
+};
+const TARGETS = [...new Set([0, ...TARGET_DECS.flatMap(d => d.end ? [+d.date, +d.end] : [+d.date])])].sort((a, b) => a - b)
+  .map(t => ({ from: new Date(t), reps: targetsOn(new Date(t)) }));
 // Cel obowiązujący w dniu `date` dla danego ćwiczenia.
 const targetFor = (name, date) => TARGETS.filter(t => t.from <= date).pop().reps[categoryOf(name, date)];
 
@@ -1309,19 +1339,20 @@ const dm = d => `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
 // Czysto, ale bez zapasu: ostatnia seria treningu z RPE powyżej CFG.raiseMaxLastRpe, oceniane dla treningów od CFG.raiseRpeFrom.
 const RAISE_RPE_FROM = isoDay(CFG.raiseRpeFrom);
 const noReserve = x => x.p.date >= RAISE_RPE_FROM && x.lastRpe > CFG.raiseMaxLastRpe;
-// Aliasy: wpis „alias”, Zmiana = „Liczyć jako <nazwa z Hevy>” (opcjonalnie „… do RRRR-MM-DD”, włącznie).
+const BUILD_BEST_FROM = isoDay(CFG.buildBestFrom);
+// Aliasy: wpis „alias”, Zmiana = „Liczyć jako <nazwa z Hevy>” (opcjonalnie „… do RRRR-MM-DD”, włącznie: data końca wpisu).
 // Obowiązuje od daty wpisu; wpisy spoza zakresu to osobna maszyna.
 const ALIASES = DECISIONS.filter(d => d.type === "alias").map(d => {
   const m = d.change.match(/jako\s+(.+?)(?:\s+do\s+(\d{4}-\d{2}-\d{2}))?\s*$/i) || [];
-  return { ex: d.ex, to: m[1], from: d.date, until: m[2] ? shiftDay(isoDay(m[2]), 1) : null };
+  return { ex: d.ex, to: m[1], from: d.date, until: d.end };
 }).filter(a => a.to);
 const aliasOf = (name, date) => (ALIASES.find(a => a.ex === name && date >= a.from && (!a.until || date < a.until)) || { to: name }).to;
 const baseName = ex => ex.replace(/\s*\(.*?\)\s*/g, " ").trim();
 // Podział jednego ćwiczenia na maszyny według słowa w notatce ćwiczenia (exercise_notes), z wpisu „maszyna”:
 // „… maszyna rozpoznawana po słowie "A" albo "B" w notatce …”. Od daty wpisu: słowo A → „<ćwiczenie> (A)”,
-// słowo B → „<ćwiczenie> (B)”, brak słowa → pierwsza maszyna (A), oba słowa → trening niepewny (z ostrzeżeniem).
+// słowo B → „<ćwiczenie> (B)”, brak słowa → pierwsza maszyna (A), oba słowa → trening niepewny (z ostrzeżeniem). Z datą końca: podział tylko do niej.
 const SPLITS = DECISIONS.filter(d => d.type === "maszyna" && /w notatce/i.test(d.change)).map(d => ({
-  ex: d.ex, from: d.date, words: [...d.change.matchAll(/["„”]([^"„”]+)["„”]/g)].map(m => m[1].trim().toLowerCase()),
+  ex: d.ex, from: d.date, end: d.end, words: [...d.change.matchAll(/["„”]([^"„”]+)["„”]/g)].map(m => m[1].trim().toLowerCase()),
 })).filter(s => s.words.length >= 2);
 const uncertainName = (ex, words) => `${baseName(ex)} (niepewne${words.length ? ": " + words.join(" lub ") : ""})`;
 const hasWord = (text, w) => new RegExp(`(^|[^\\p{L}])${w}([^\\p{L}]|$)`, "iu").test(text);
@@ -1357,7 +1388,7 @@ const periodOf = (name, date) => PERIODS.find(p => p.ex === name && date >= p.fr
 const isClosed = name => PERIODS.some(p => !p.uncertain && !p.assigned && p.name === name);
 // Nazwa maszyny dla wpisu z podziałem według notatki; null = ćwiczenie bez podziału w tym dniu.
 function splitOf(name, date, note) {
-  const s = SPLITS.filter(x => x.ex === name && date >= x.from).pop();
+  const s = SPLITS.filter(x => x.ex === name && date >= x.from && (!x.end || date < x.end)).pop();
   if (!s) return null;
   const hits = s.words.filter(w => hasWord(note || "", w));
   if (hits.length > 1) return { name: uncertainName(name, s.words), uncertain: true, hits };
@@ -1842,8 +1873,18 @@ function renderKPIs() {
 
 // ---------- Sygnały, kolejność, zastoje (wg założeń) ----------
 const short = n => n.replace(/\s*\(.*?\)\s*/g, " ").trim();
-// Dni wyłączone z oceny progresji (wpisy „wyjatek” dla całego planu w decyzje.md).
-const isExcluded = d => DECISIONS.some(x => x.type === "wyjatek" && x.ex === "*" && dayDiff(x.date, d) === 0);
+// Zaplanowany wyjątek od limitu treningów w tygodniu (CFG.maxPerWeek): wpis „wyjatek” dla * ze słowami „limit … treningów w tygodniu”,
+// od Daty do daty końca. Nie wyłącza treningów z oceny progresji i nie jest znacznikiem na kartach progresu.
+const isLimitException = d => d.type === "wyjatek" && d.ex === "*" && /limit\p{L}*\s+(?:\d+\s+)?trening\p{L}*\s+w\s+tygodniu/iu.test(d.change);
+// Dni wyłączone z oceny progresji (pozostałe wpisy „wyjatek” dla całego planu w decyzje.md): dzień Daty albo okres do daty końca.
+const isExcluded = d => DECISIONS.some(x => x.type === "wyjatek" && x.ex === "*" && !isLimitException(x) && inForce(x, d));
+// Tydzień (pn–nd) ponad limitem, którego wszystkie treningi są w okresie wpisu o wyjątku od limitu: zwraca ten wpis (informacja ℹ), inaczej null.
+const plannedWeek = w => {
+  const list = DECISIONS.filter(isLimitException);
+  return w.items.length && w.items.every(x => list.some(d => inForce(d, x.start))) ? list.find(d => w.items.some(x => inForce(d, x.start))) : null;
+};
+const dayRange = (a, b) => +midnight(a) === +midnight(b) ? fmtDate(a) : a.getMonth() === b.getMonth() ? `${a.getDate()}–${fmtDate(b)}` : `${fmtDate(a)} – ${fmtDate(b)}`;
+const plannedTxt = d => `zaplanowany wyjątek od limitu ${CFG.maxPerWeek} treningów (decyzje.md, ${dayRange(d.date, d.until || d.date)})`;
 
 // Każdą sesję oceniam względem celu obowiązującego w dniu tego treningu.
 // Ciężar roboczy sesji (kg) to najwyższy ciężar z co najmniej CFG.sets seriami roboczymi:
@@ -1903,8 +1944,9 @@ function exStats(e) {
   const lf = full[full.length - 1] || li;     // ostatnia pełna sesja (do oceny)
   const kgNow = lf.kg;
   // Budowanie powtórzeń po podniesieniu (decyzje.md 25.10): trening na nowym ciężarze poniżej celu (bez zejścia w trakcie).
-  // Suma = CFG.sets serii na ciężarze roboczym. Pierwszy trening na nowym ciężarze i każdy ze wzrostem sumy wobec poprzedniego treningu
-  // na tym ciężarze to „budowanie powtórzeń” (x.build). Bez wzrostu sumy: x.hold = podniesienia w ćwiczeniach powiązanych (CFG.relatedLifts)
+  // Suma = CFG.sets serii na ciężarze roboczym. Pierwszy trening na nowym ciężarze i każdy ze wzrostem sumy na tym ciężarze to „budowanie
+  // powtórzeń” (x.build). Wzrost liczę wobec x.ref: od CFG.buildBestFrom najlepszej dotąd sumy na tym ciężarze (x.best; pierwszy trening z tą sumą),
+  // wcześniej poprzedniego treningu. Bez wzrostu sumy: x.hold = podniesienia w ćwiczeniach powiązanych (CFG.relatedLifts)
   // od poprzedniego treningu (bez dnia tamtego treningu, z dniem tego), albo null.
   markRaises(e, full);
   full.forEach((x, i) => {
@@ -1912,8 +1954,10 @@ function exStats(e) {
     x.goal = CFG.sets * x.target;
     x.building = x.newKg && x.mode !== "drop" && x.minReps < x.target;
     const prev = i > x.k ? full[i - 1] : null;
-    x.build = x.building && (!prev || x.sum > prev.sum) ? { prev } : null;
-    const rel = x.building && !x.build ? relatedRaises(e, prev.p.date, x.p.date) : [];
+    x.best = !!prev && x.p.date >= BUILD_BEST_FROM;
+    x.ref = x.best ? full.slice(x.k, i).reduce((b, y) => y.sum > b.sum ? y : b) : prev;
+    x.build = x.building && (!x.ref || x.sum > x.ref.sum) ? { prev: x.ref } : null;
+    const rel = x.building && !x.build ? relatedRaises(e, prev.p.date, x.p) : [];
     x.hold = rel.length ? rel : null;
   });
   let streak = 0;
@@ -1964,15 +2008,19 @@ function markRaises(e, full) {
   });
   return full;
 }
-// Podniesienia ciężaru (z danych) w ćwiczeniach powiązanych z `e` (CFG.relatedLifts, także maszyny wydzielone z notatki) w okresie (from, to]:
-// tylko pierwszy pełny trening na wyższym ciężarze.
+// Podniesienia ciężaru (z danych) w ćwiczeniach powiązanych z `e` (CFG.relatedLifts, także maszyny wydzielone z notatki) od treningu `from`
+// (bez niego) do bieżącego treningu `cur` (z nim): tylko pierwszy pełny trening na wyższym ciężarze. Od CFG.relatedOrderFrom podniesienie
+// w bieżącym treningu liczy się tylko, gdy ćwiczenie powiązane było w nim przed `e` (kolejność ćwiczeń z CSV, seqOf).
+const RELATED_ORDER_FROM = isoDay(CFG.relatedOrderFrom);
 const relatedOf = name => CFG.relatedLifts[name] || CFG.relatedLifts[sourceOf(name)] || [];
-function relatedRaises(e, from, to) {
+function relatedRaises(e, from, cur) {
   const names = relatedOf(e.name);
   if (!names.length) return [];
+  const seq = seqOf(cur.workout), before = r => cur.date < RELATED_ORDER_FROM || seq.indexOf(r.name) < seq.indexOf(e.name);
   return MODEL.exercises.filter(r => r !== e && r.kind === "weight" && !r.uncertain && names.some(n => r.name === n || sourceOf(r.name) === n))
     .flatMap(r => markRaises(r, r.progress.filter(p => !isExcluded(p.date)).map(p => sessionInfo(r, p)).filter(x => x.full))
-      .filter((x, i) => i === x.k && x.raised != null && x.p.date > from && x.p.date <= to).map(x => ({ e: r, x })));
+      .filter((x, i) => i === x.k && x.raised != null && x.p.date > from && x.p.date <= cur.date && (x.p.workout !== cur.workout || before(r)))
+      .map(x => ({ e: r, x })));
 }
 // Opis podniesień w ćwiczeniach powiązanych: krótko („podniesiono wiosłowanie”) i ze szczegółami.
 const holdShort = hold => "podniesiono " + [...new Set(hold.map(h => familyOf(h.e.name).toLowerCase()))].join(", ");
@@ -2012,10 +2060,12 @@ function signalOf(e, s) {
   }
   const { streak, unclean } = s;
   let sig;
-  // Budowanie powtórzeń: postęp do celu (suma z CFG.sets serii wobec CFG.sets × cel) i porównanie z poprzednim treningiem na tym ciężarze.
+  // Budowanie powtórzeń: postęp do celu (suma z CFG.sets serii wobec CFG.sets × cel) i porównanie z poprzednim treningiem na tym ciężarze
+  // (od CFG.buildBestFrom z najlepszą dotąd sumą na tym ciężarze, li.ref).
   // Wzrost sumy zaczyna licznik zastoju od nowa; bez wzrostu trening zwiększa licznik, chyba że podniesiono ćwiczenie powiązane (li.hold).
-  const progress = `${li.sum}/${li.goal} powtórzeń (${li.reps.join("/")}, cel ${CFG.sets} × ${li.target})`, prevF = s.full[s.full.length - 2];
-  const noGrowth = li.building && !li.build ? ` Suma ${li.sum} bez wzrostu wobec ${prevF.sum} (${fmtDate(prevF.p.date)}), ` +
+  const progress = `${li.sum}/${li.goal} powtórzeń (${li.reps.join("/")}, cel ${CFG.sets} × ${li.target})`;
+  const cmp = r => `${li.best ? "najlepszej dotąd sumy na tym ciężarze " : ""}${r.sum} (${fmtDate(r.p.date)})`;
+  const noGrowth = li.building && !li.build ? ` Suma ${li.sum} bez wzrostu wobec ${cmp(li.ref)}, ` +
     (li.hold ? `ale od poprzedniego treningu ${holdShort(li.hold)} (${holdLong(li.hold)}), więc trening nie zwiększa licznika zastoju i go nie zeruje.`
       : "więc trening zwiększa licznik zastoju.") : "";
   const almost = noGrowth + (unclean === CFG.stallSessions - 1 ? ` Jeszcze jeden trening bez czystego wyniku${li.newKg ? " i bez wzrostu sumy powtórzeń" : ""} i będzie zastój.` : "");
@@ -2024,7 +2074,7 @@ function signalOf(e, s) {
     (s.run.some(x => x.building) ? ` i bez wzrostu sumy powtórzeń (sumy: ${s.run.filter(x => !x.hold).map(x => x.sum).join(", ")}).` : ".") +
     (holds.length ? ` Bez zmiany licznika: ${holds.map(x => `${fmtDate(x.p.date)} (${holdShort(x.hold)})`).join(", ")}.` : "") + (li.hold ? noGrowth : "") };
   else if (li.build) sig = { st: "hold", label: `◐ Budowanie powtórzeń ${li.sum}/${li.goal}`,
-    why: (li.build.prev ? `Suma ${li.sum} wobec ${li.build.prev.sum} (${fmtDate(li.build.prev.p.date)}), +${li.sum - li.build.prev.sum}; ${progress}. Wzrost sumy zeruje licznik zastoju.`
+    why: (li.build.prev ? `Suma ${li.sum} wobec ${cmp(li.build.prev)}, +${li.sum - li.build.prev.sum}; ${progress}. Wzrost sumy zeruje licznik zastoju.`
       : (li.raised != null ? `Po podniesieniu ${kg(li.raised)} → ${kg(li.kg)}: ` : `Nowy ciężar ${kg(li.kg)} od ${fmtDate(li.startDec.date)} (decyzje.md): `) +
         `${progress}. Zastój dopiero po ${CFG.stallSessions} treningach z rzędu bez wzrostu sumy, licząc ten.`) + almost };
   else if (li.mode === "drop") sig = { st: "down", label: "↘ Zejście w trakcie",
@@ -2045,16 +2095,25 @@ function signalOf(e, s) {
 // Zmiana planu na rutyny A / B / C: wpis „zasada” dla * w decyzje.md, który wymienia FBW_A / FBW_B / FBW_C.
 // Od jego daty rutynę treningu rozpoznaję po tytule; wcześniejsze treningi oceniam po staremu (Klata+ / Plecy+).
 const PLAN_CHANGES = DECISIONS.filter(d => d.ex === "*" && d.type === "zasada" && /\bFBW_[ABC]\b/i.test(d.change)).sort((a, b) => a.date - b.date);
-// Tydzień utrwalenia: wpis „zasada” dla * zaczynający się od „Tydzień utrwalenia” i zakresem dni, np. „18–22.10” (rok z daty wpisu).
-// Podniesienia są wtedy wstrzymane decyzją, więc „zaległe podniesienia” z tych dni nie są ostrzeżeniem.
+// Tydzień utrwalenia: wpis „zasada” dla * zaczynający się od „Tydzień utrwalenia”: od Daty do daty końca („do RRRR-MM-DD”) albo
+// zakres dni w treści, np. „18–22.10” (rok z daty wpisu). Podniesienia są wtedy wstrzymane decyzją, więc „zaległe podniesienia” z tych dni nie są ostrzeżeniem.
 const CONSOLIDATION = (() => {
   const d = DECISIONS.find(x => x.ex === "*" && x.type === "zasada" && /^Tydzień utrwalenia/i.test(x.change));
+  if (d && d.end) return { from: d.date, to: new Date(+d.end - 1000) };
   const m = d && d.change.match(/(\d{1,2})\s*[–-]\s*(\d{1,2})\.(\d{1,2})/);
   return m ? { from: new Date(d.date.getFullYear(), +m[3] - 1, +m[1]), to: new Date(d.date.getFullYear(), +m[3] - 1, +m[2], 23, 59, 59) } : null;
 })();
 const ROUTINES_FROM = PLAN_CHANGES.length ? PLAN_CHANGES[0].date : null;
+// Rutyna przypisana we wpisie „zasada” dla * w decyzje.md: „trening DD.MM (tytuł) = FBW_X” (rok z daty wpisu), gdy tytuł w Hevy jej nie wskazuje
+// (np. 11.10 „FBW_Plecy+” = FBW_A). Przypisanie ma pierwszeństwo przed tytułem; działa od początku rozpoznawania rutyn (ROUTINES_FROM).
+const ROUTINE_MAP = DECISIONS.filter(d => d.ex === "*" && d.type === "zasada").flatMap(d =>
+  [...d.change.matchAll(/trening\s+(\d{1,2})\.(\d{1,2})\s*(?:\([^)]*\)\s*)?=\s*FBW_([ABC])(?![\p{L}\d_+])/giu)]
+    .map(m => ({ day: new Date(d.date.getFullYear(), +m[2] - 1, +m[1]), r: m[3].toUpperCase() })));
+const mappedRoutine = w => !!ROUTINES_FROM && w.start >= ROUTINES_FROM && ROUTINE_MAP.find(x => dayDiff(x.day, w.start) === 0) || null;
 const routineOf = w => {
   if (!ROUTINES_FROM || w.start < ROUTINES_FROM) return null;
+  const mapped = mappedRoutine(w);
+  if (mapped) return mapped.r;
   const m = w.title.match(/FBW_([ABC])(?![\p{L}\d_+])/iu);
   return m ? m[1].toUpperCase() : null;
 };
@@ -2099,10 +2158,12 @@ const fixedFam = kind => familyOf((PLAN.find(r => r.fixed === kind) || {}).main 
 const slot = (mains, label) => ({ label, fams: [].concat(mains).map(familyOf), legs: [].concat(mains).some(m => blockOf(m) === "nogi"), abs: [].concat(mains).some(m => blockOf(m) === "brzuch") });
 // Brzuch w kontroli kolejności: do daty wpisu „kolejnosc” dla ćwiczenia brzucha obowiązuje „na końcu”, od niej „po leg pressie, nie w przerwie
 // między seriami ćwiczenia złożonego”. Okres bez brzucha w treningu siłowym: wpis „zasada” dla * zaczynający się od „Brzuch poza treningiem”
-// do powrotu brzucha; w tym okresie „Pominięte” nie wymaga brzucha.
+// do powrotu brzucha (albo do daty końca wpisu, jeśli jest wcześniejsza); w tym okresie „Pominięte” nie wymaga brzucha.
 const ABS_BACK = (DECISIONS.filter(d => d.type === "kolejnosc" && blockOf(d.ex) === "brzuch").sort((a, b) => a.date - b.date)[0] || {}).date || null;
-const ABS_OFF = (DECISIONS.find(d => d.ex === "*" && d.type === "zasada" && /^Brzuch poza treningiem/i.test(d.change)) || {}).date || null;
-const absOptional = w => !!ABS_OFF && w.start >= ABS_OFF && (!ABS_BACK || w.start < ABS_BACK);
+const ABS_OFF_DEC = DECISIONS.find(d => d.ex === "*" && d.type === "zasada" && /^Brzuch poza treningiem/i.test(d.change)) || null;
+const ABS_OFF = ABS_OFF_DEC ? ABS_OFF_DEC.date : null;
+const ABS_OFF_TO = [ABS_BACK, ABS_OFF_DEC && ABS_OFF_DEC.end].filter(Boolean).sort((a, b) => a - b)[0] || null;   // pierwszy dzień z wymaganym brzuchem
+const absOptional = w => !!ABS_OFF && w.start >= ABS_OFF && (!ABS_OFF_TO || w.start < ABS_OFF_TO);
 const LEGACY_SLOTS = LEGACY_PLAN.map(([m, l]) => slot(m, l));
 const ROUTINE_SLOTS = Object.fromEntries(ROUTINE_NAMES.map(n => [n, PLAN.filter(r => r.routines.includes(n)).map(r => slot(r.main, r.label))]));
 // Trening po zmianie planu bez FBW_A / B / C w tytule: tylko ruchy wspólne dla wszystkich rutyn.
@@ -2252,10 +2313,13 @@ function renderSignals() {
     `Wg zasady z decyzje.md najwyżej ${maxN} ${plPodniesienie(maxN)} na trening; lista nad tabelą jest od największego zapasu, czyli od najniższego średniego RPE wszystkich serii roboczych (bez rozgrzewkowych) ostatniego ocenianego treningu, i jest tylko informacją: wybór należy do Ciebie. ` +
     `Zastój = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego wyniku. ` +
     `Budowanie powtórzeń: po podniesieniu (ciężar roboczy wyższy niż w poprzednim pełnym treningu tej maszyny, rozpoznawany z danych, notatka nie jest potrzebna) ` +
-    `pierwszy trening na nowym ciężarze poniżej celu i każdy kolejny poniżej celu z większą sumą powtórzeń niż poprzedni trening na tym ciężarze; postęp jako suma / ${CFG.sets} × cel. ` +
-    `Na nowym ciężarze poniżej celu zastój = suma powtórzeń bez wzrostu przez ${CFG.stallSessions} treningi z rzędu, licząc trening, z którym porównuję (np. 23, 23, 23); każdy wzrost sumy zeruje licznik. ` +
+    `pierwszy trening na nowym ciężarze poniżej celu i każdy kolejny poniżej celu z większą sumą powtórzeń niż najlepsza dotąd suma na tym ciężarze ` +
+    `(od ${fmtDate(BUILD_BEST_FROM)}, CFG.buildBestFrom; treningi wcześniejsze porównuję z poprzednim treningiem na tym ciężarze); postęp jako suma / ${CFG.sets} × cel. ` +
+    `Na nowym ciężarze poniżej celu zastój = suma powtórzeń bez wzrostu przez ${CFG.stallSessions} treningi z rzędu, licząc trening, z którym porównuję (np. 23, 23, 23); każdy wzrost sumy zeruje licznik ` +
+    `(od ${fmtDate(BUILD_BEST_FROM)} np. 24, 22, 23 = zastój po 23, bo 23 nie przekracza 24). ` +
     `Trening bez wzrostu sumy nie zwiększa licznika i go nie zeruje, jeśli od poprzedniego treningu tego ćwiczenia podniesiono ciężar w ćwiczeniu powiązanym (ℹ przy sygnale, lista w CFG.relatedLifts: ` +
     Object.entries(CFG.relatedLifts).map(([k, v]) => `${k} ← ${v.join(", ")}`).join("; ") + `; Chest Press (Machine) = obie maszyny, talerze i stos). ` +
+    `Od ${fmtDate(RELATED_ORDER_FROM)} (CFG.relatedOrderFrom) podniesienie w tym samym treningu liczy się tylko, gdy ćwiczenie powiązane było w nim wcześniej (kolejność z CSV); podniesienie w treningach pomiędzy liczy się jak dotąd. ` +
     `Treningi skrócone, dni oznaczone w decyzje.md jako wyjątek i maszyny nieużywane od ponad ${CFG.signalsActiveDays} dni pomijam. RPE traktuję pomocniczo. ` +
     `Ćwiczenia z masą ciała (np. unoszenie kolan) nie mają stałego celu: suma powtórzeń z serii roboczych porównana z poprzednim treningiem tego ćwiczenia ` +
     `(▲ lepiej, ● tak samo, ▼ gorzej), bez zastojów i podniesień ciężaru. Tag przy ruchu = rutyny, w których występuje (gdy nie we wszystkich).`;
@@ -2300,8 +2364,9 @@ function renderOrder() {
     : c.st === "pre" ? `<span class="na" data-tip="${esc(c.t)}">—<span class="vh"> ${esc(c.t.toLowerCase())}</span></span>` : `<span class="bad">✗ ${esc(c.t)}</span>`;
   const tr = ({ w, c }) => {
     const v = variantOf(w);
+    // Rutyna przypisana w decyzje.md (tytuł w Hevy jej nie wskazuje): dopisek pod nazwą.
     return `<tr><td class="nw">${esc(fmtDate(w.start))}<div class="why">${esc(w.title)}</div></td>
-      <td class="nw">${v ? "FBW_" + v : `<span class="na">–</span>`}</td>
+      <td class="nw">${v ? "FBW_" + v + (mappedRoutine(w) ? `<div class="why">wg decyzje.md</div>` : "") : `<span class="na">–</span>`}</td>
       ${c.map(x => `<td>${cell(x)}${x.note ? `<div class="why">${esc(x.note)}</div>` : ""}</td>`).join("")}</tr>`;
   };
   const recent = rows.slice(0, CFG.orderRecent), older = rows.slice(CFG.orderRecent);
@@ -2330,10 +2395,11 @@ function renderOrder() {
     <p>Plan ustalał się stopniowo. ${dated.length ? `Dla zasad z datą wprowadzenia w decyzje.md (${dated.map(rl => `${esc(rl.label.toLowerCase())}: od ${esc(fmtDate(rl.from))}`).join("; ")})
       treningi wcześniejsze mają szare „—” i nie liczą się do podsumowania zgodności. ` : ""}${undated.length ? `Pozostałe zasady nie mają daty wprowadzenia,
       więc oceniam wszystkie treningi (starsze mogą ich nie spełniać).` : ""}</p>
-    <p>Pominięte: ${ROUTINES_FROM ? `od ${esc(fmtDate(ROUTINES_FROM))} wymagane są ruchy z rutyny treningu (FBW_A, FBW_B, FBW_C, rozpoznawane po tytule);
+    <p>Pominięte: ${ROUTINES_FROM ? `od ${esc(fmtDate(ROUTINES_FROM))} wymagane są ruchy z rutyny treningu (FBW_A, FBW_B, FBW_C, rozpoznawane po tytule${ROUTINE_MAP.length
+      ? `; przypisane w decyzje.md: ${esc(ROUTINE_MAP.map(x => `${fmtDate(x.day)} = FBW_${x.r}`).join(", "))}, kolumna „Wariant” z dopiskiem „wg decyzje.md”` : ""});
       późniejsze treningi bez rozpoznanej rutyny mają wymagane tylko ruchy wspólne dla wszystkich rutyn (z informacją przy ocenie); wcześniejsze treningi` : "wszystkie treningi"} sprawdzam według planu sprzed rutyn (wystarczą rozpiętki albo ściąganie drążka).
       Bez żadnego ćwiczenia na nogi ruchy nóg nie są wymagane (pominięcie nóg okazjonalnie jest w porządku).
-      ${ABS_OFF ? `Od ${esc(fmtDate(ABS_OFF))}${ABS_BACK ? ` do ${esc(fmtDate(new Date(ABS_BACK - 864e5)))}` : ""} brzuch nie jest wymagany (wpis w decyzje.md: brzuch poza treningiem siłowym).` : ""}</p>
+      ${ABS_OFF ? `Od ${esc(fmtDate(ABS_OFF))}${ABS_OFF_TO ? ` do ${esc(fmtDate(new Date(ABS_OFF_TO - 864e5)))}` : ""} brzuch nie jest wymagany (wpis w decyzje.md: brzuch poza treningiem siłowym).` : ""}</p>
     <p>Podsumowanie nad tabelą: liczba treningów zgodnych z zasadą wśród ocenionych, ze wszystkich treningów (także schowanych pod „Pokaż starsze”).
       Widać ${CFG.orderRecent} ostatnie treningi (CFG.orderRecent).</p>`;
 }
@@ -2410,8 +2476,10 @@ function renderPlateaus() {
   $("#help-plateaus").innerHTML = `<p><b>Zastój</b> = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego ${CFG.sets} × cel (cel z dnia treningu).
       Najpierw szukamy przyczyny, potem zmieniamy ciężar lub objętość. Po podniesieniu ciężaru (wciąż poniżej celu) zastój = suma powtórzeń
       bez wzrostu przez ${CFG.stallSessions} treningi z rzędu, licząc trening, z którym porównuję (np. 23, 23, 23); każdy wzrost sumy zeruje licznik
-      (25, 25, 27, 27, 27 = zastój dopiero po trzecim 27). Trening bez wzrostu sumy po podniesieniu ciężaru w ćwiczeniu powiązanym (np. biceps po wiosłowaniu,
-      CFG.relatedLifts) nie zwiększa licznika i go nie zeruje (ℹ w tabeli).</p>
+      (25, 25, 27, 27, 27 = zastój dopiero po trzecim 27). Od ${esc(fmtDate(BUILD_BEST_FROM))} (CFG.buildBestFrom) wzrost = suma większa niż najlepsza dotąd
+      na tym ciężarze (24, 22, 23 = zastój po 23); treningi wcześniejsze porównuję z poprzednim treningiem. Trening bez wzrostu sumy po podniesieniu ciężaru w ćwiczeniu powiązanym (np. biceps po wiosłowaniu,
+      CFG.relatedLifts) nie zwiększa licznika i go nie zeruje (ℹ w tabeli). Od ${esc(fmtDate(RELATED_ORDER_FROM))} (CFG.relatedOrderFrom) podniesienie w tym samym treningu
+      liczy się tylko, gdy ćwiczenie powiązane było w nim wcześniej (kolejność z CSV).</p>
     <p><b>Zaległe podniesienie</b> = co najmniej ${CFG.overdueSessions} czyste treningi z rzędu na tym samym ciężarze i ostatnia seria najnowszego treningu z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)} (czysto, ale bez zapasu nie jest zaległe; warunek RPE od ${esc(fmtDate(RAISE_RPE_FROM))}, wcześniej same czyste treningi). <b>Do obserwacji</b> = ${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego wyniku.
       Jeśli ostatni trening wypadł w tygodniu utrwalenia z decyzje.md (podniesienia wstrzymane), wiersz nazywa się „Tydzień utrwalenia” i nie jest ostrzeżeniem.</p>
     <p><b>Przyczyna przeanalizowana</b>: po początku zastoju jest wpis w decyzje.md dla tego ćwiczenia (ciezar, kolejnosc, zasada albo maszyna).
@@ -2515,8 +2583,9 @@ const MARK_TYPES = new Set(["ciezar", "kolejnosc", "zasada", "kategoria", "maszy
 const MARK_TYPES_ALL = new Set(["kategoria", "wyjatek"]);                                 // wpisy dla całego planu (*)
 
 // Znaczniki decyzji: wpisy dla ćwiczeń z tej rodziny ruchu oraz wpisy dla całego planu (*) typu kategoria / wyjatek
-// i zmiany planu (wpis „zasada” dla * z rutynami FBW_A / B / C, PLAN_CHANGES).
-const markersFor = fam => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) || PLAN_CHANGES.includes(d) : MARK_TYPES.has(d.type) && familyOf(d.ex) === fam).map(d => ({ d: d.date,
+// i start planu (najwcześniejszy wpis „zasada” dla * z rutynami FBW_A / B / C, PLAN_CHANGES[0]; późniejsze wpisy tego rodzaju nie są znacznikami).
+// Wyjątek od limitu treningów w tygodniu nie dotyczy progresji, więc nie jest znacznikiem.
+const markersFor = fam => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) && !isLimitException(d) || d === PLAN_CHANGES[0] : MARK_TYPES.has(d.type) && familyOf(d.ex) === fam).map(d => ({ d: d.date,
   html: `<div class="t">${esc(fmtDateLong(d.date))}</div><div class="muted" style="margin-bottom:4px">decyzje.md · ${esc(d.ex === "*" ? "cały plan" : d.ex)}</div>` +
     `<div><b>${esc(d.type)}</b>: ${esc(d.change)}</div><div class="n">${esc(d.why)}</div>` }));
 
@@ -2793,21 +2862,25 @@ function renderCalendar() {
   ws.forEach(w => { const h = w.start.getHours(); pora[h >= 5 && h < 11 ? "rano" : h >= 11 && h < 17 ? "w ciągu dnia" : h >= 17 && h < 21 ? "wieczór" : "noc"]++; });
   // Za krótka przerwa: między dniami treningowymi mniej niż CFG.minRestDays dni wolnych.
   const b2b = gaps.filter(g => g.n - 1 < CFG.minRestDays);
-  const over = weeks(ws).filter(w => w.items.length > CFG.maxPerWeek);
+  // Tydzień ponad limitem w okresie zaplanowanego wyjątku (decyzje.md) to informacja ℹ w osobnej linii, nie ostrzeżenie.
+  const overAll = weeks(ws).filter(w => w.items.length > CFG.maxPerWeek);
+  const over = overAll.filter(w => !plannedWeek(w)), planned = overAll.filter(plannedWeek);
   const minRest = `min. ${CFG.minRestDays} ${plDni(CFG.minRestDays)} przerwy`;
   const stats = [
     [CFG.minRestDays === 1 ? "Treningi dzień po dniu" : "Za krótka przerwa", b2b.length ? `⚠ ${b2b.length}×` : "✓ 0",
       b2b.length ? b2b.map(g => `${fmtDate(g.from)} → ${fmtDate(g.to)}`).join(", ") + ` (założenie: ${minRest})` : `zawsze ${minRest}`],
     [`Tygodnie z > ${CFG.maxPerWeek} treningami`, over.length ? `⚠ ${over.length}` : "✓ 0",
-      over.length ? over.map(w => `tydz. od ${fmtDate(w.start)}: ${w.items.length}`).join(", ") : `zgodnie z limitem ${CFG.maxPerWeek} / tydz.`],
+      over.length ? over.map(w => `tydz. od ${fmtDate(w.start)}: ${w.items.length}`).join(", ")
+        : `${planned.length ? (planned.length === 1 ? "poza zaplanowanym wyjątkiem " : "poza zaplanowanymi wyjątkami ") : ""}zgodnie z limitem ${CFG.maxPerWeek} / tydz.`,
+      planned.map(w => `ℹ tydz. od ${fmtDate(w.start)}: ${w.items.length}, ${plannedTxt(plannedWeek(w))}`).join("; ")],
     sinceLast >= 0 ? ["Od ostatniego treningu", sinceLast === 0 ? "dziś" : `${sinceLast} ${plDni(sinceLast)}`, fmtDateLong(lastDay)] : null,
     gaps.length ? ["Średni odstęp", `${nf(mean(gaps.map(g => g.n)), 1)} dnia`, "między kolejnymi dniami treningowymi"] : null,
     maxGap.n ? ["Najdłuższa przerwa", `${maxGap.n} ${plDni(maxGap.n)}`, `${fmtDate(maxGap.from)} → ${fmtDate(maxGap.to)}`] : null,
     ["Najczęściej trenujesz", WD_LONG.filter((_, i) => wd[i] === top).join(", "), WD_SHORT.map((s, i) => `${s} ${wd[i]}`).join(" · ")],
     ["Pora dnia", Object.entries(pora).sort((a, b) => b[1] - a[1])[0][0], Object.entries(pora).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(" · ")],
   ].filter(Boolean);
-  $("#cal-stats").innerHTML = stats.map(([l, v, n]) =>
-    `<div class="stat"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="note">${esc(n)}</div></div>`).join("");
+  $("#cal-stats").innerHTML = stats.map(([l, v, n, info]) =>
+    `<div class="stat"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="note">${esc(n)}</div>${info ? `<div class="note info-note">${esc(info)}</div>` : ""}</div>`).join("");
 }
 
 function renderWeekly() {
@@ -2822,9 +2895,12 @@ function renderWeekly() {
       const range = w.start.getMonth() === w.end.getMonth() ? `${w.start.getDate()}–${fmtDate(w.end)}` : `${fmtDate(w.start)} – ${fmtDate(w.end)}`;
       const ongoing = today >= w.start && today < new Date(w.end.getFullYear(), w.end.getMonth(), w.end.getDate() + 1);
       const b2b = w.items.slice(1).filter((x, i) => dayDiff(w.items[i].start, x.start) - 1 < CFG.minRestDays).length;
+      // Ponad limitem w okresie zaplanowanego wyjątku (decyzje.md): informacja ℹ zamiast ostrzeżenia.
+      const planned = w.items.length > CFG.maxPerWeek && plannedWeek(w);
       return `<div class="t">Tydzień ${esc(range)}${ongoing ? " <span class='muted'>(w trakcie)</span>" : ""}</div>
         ${tipRow("Treningi", nf(w.items.length))}
-        ${w.items.length > CFG.maxPerWeek ? `<div class="n" style="color:var(--warning);font-style:normal">⚠ powyżej założonych ${CFG.maxPerWeek} treningów</div>` : ""}
+        ${planned ? `<div class="n" style="font-style:normal">ℹ ${esc(plannedTxt(planned))}</div>`
+          : w.items.length > CFG.maxPerWeek ? `<div class="n" style="color:var(--warning);font-style:normal">⚠ powyżej założonych ${CFG.maxPerWeek} treningów</div>` : ""}
         ${b2b ? `<div class="n" style="color:var(--warning);font-style:normal">⚠ trening dzień po dniu (bez dnia przerwy)</div>` : ""}
         ${w.items.length ? tipRow("Objętość", kg(sum(w.items, x => x.volume))) : ""}
         ${w.items.map(x => `<div class="muted">${esc(fmtDate(x.start))} · ${esc(x.title)}</div>`).join("")}`;
