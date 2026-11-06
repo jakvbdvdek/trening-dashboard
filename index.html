@@ -233,6 +233,10 @@ table.order th { white-space: normal; vertical-align: bottom; }
 .warn .ic { color: var(--warning); font-weight: 700; }
 .info { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
 .info .ic { color: var(--text-muted); font-weight: 700; }
+/* Ostrzeżenie z rozwijanym „Dlaczego?”: krótka linijka i przycisk (cel 44 px, ujemny margines, żeby ramka nie rosła); wyjaśnienie pod spodem. */
+.warn .w-body { min-width: 0; }
+.warn .w-why { margin: -11px 0 -11px 2px; vertical-align: middle; }
+.warn .w-more { margin-top: 6px; color: var(--text-secondary); }
 /* Gotowe do podniesienia: limit z decyzje.md nad listą, lista bez wyróżniania (dashboard niczego nie wybiera). */
 .info.ready .ready-note { margin: 2px 0 4px; color: var(--text-primary); }
 .info.ready ul { margin: 0; padding-left: 18px; }
@@ -247,10 +251,25 @@ table.order th { white-space: normal; vertical-align: bottom; }
 .panel table.heat.sticky-first tbody tr:hover td:first-child { background: var(--surface-2); }
 h4 { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
 table.heat { min-width: 0; width: auto; }
+#muscle-heat { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }   /* pełna szerokość karty, tygodnie po równo; min-width ze skryptu (HEAT_COL); separate: każda komórka maluje własne krawędzie, więc przypięta kolumna przykrywa znacznik */
+#muscle-heat td.hc { border-width: 1px; }
+table.heat th.empty { padding: 4px 0; }
+table.heat td.hc.empty { background: none; }
+/* Cienki nagłówek grupy wierszy (Pchanie, Ciągnięcie …). */
+table.heat tr.grp th, table.heat tr.grp td { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 12px 0 3px; border-bottom: 1px solid var(--grid); }
+/* Znacznik zmiany planu nad tabelą (jak na wykresach progresu): przerywana linia i romb w --text-secondary; przypięta kolumna go przykrywa. */
+.heat-box { position: relative; padding-right: 8px; overflow: clip; }   /* miejsce na romb przy prawej krawędzi; clip (nie hidden), żeby przypięta kolumna działała */
+.cyc-mark { position: absolute; top: 2px; bottom: 0; width: 0; border-left: 1px dashed var(--text-secondary); opacity: 0.8; pointer-events: none; z-index: 0; margin-left: -0.5px; }
+.cyc-dia { position: absolute; top: -2px; left: -12px; width: 24px; height: 24px; pointer-events: auto; cursor: default; }
+.cyc-dia::before, .cyc-key::before { content: ""; position: absolute; left: 8px; top: 0; width: 8px; height: 8px; background: var(--text-secondary); transform: rotate(45deg); }
+.cyc-key { position: relative; display: inline-block; width: 24px; height: 10px; vertical-align: -1px; border-left: 0; margin-right: 2px; }
+.cyc-key::before { left: 6px; top: 1px; }
+table.heat.sticky-first th:first-child, table.heat.sticky-first td:first-child { z-index: 2; }
+table.heat tbody:first-of-type tr.grp th, table.heat tbody:first-of-type tr.grp td { padding-top: 4px; }
 table.heat th { cursor: default; position: static; font-weight: 500; font-size: 13px; color: var(--text-muted); text-align: center; padding: 4px; }
 table.heat th.rl, table.heat td.rl { text-align: left; color: var(--text-secondary); font-size: 14px; padding: 4px 10px 4px 0; border-bottom: 0; }
-table.heat td.hc { width: 46px; height: 30px; text-align: center; padding: 0; border: 2px solid var(--surface); border-radius: 6px; font-size: 14px; font-weight: 600; }
-table.heat td.tot { text-align: right; color: var(--text-secondary); border-bottom: 0; padding-left: 12px; }
+table.heat td.hc { height: 30px; text-align: center; padding: 0; border: 2px solid var(--surface); border-radius: 6px; font-size: 14px; font-weight: 600; }
 table.heat tbody tr:hover td { background: inherit; }
 table.heat.sticky-first tbody tr:hover td:first-child { background: var(--surface); }
 details { margin-top: 14px; }
@@ -467,7 +486,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
     </div>
     <div id="muscle-warn"></div>
     <div class="muscle-row">
-      <div class="panel"><h4>Serie w poszczególnych tygodniach</h4><div class="table-wrap" tabindex="0" role="region" aria-label="Serie w poszczególnych tygodniach"><table class="heat sticky-first" id="muscle-heat"></table></div><div class="note" id="muscle-note" hidden></div></div>
+      <div class="panel"><h4>Serie w poszczególnych tygodniach</h4><div class="table-wrap" tabindex="0" role="region" aria-label="Serie w poszczególnych tygodniach"><div class="heat-box" id="muscle-box"><table class="heat sticky-first" id="muscle-heat"></table></div></div><div class="note" id="muscle-note" hidden></div></div>
     </div>
     <details><summary>Jak przypisałem ćwiczenia do grup</summary><div class="map-list" id="muscle-map"></div></details>
   </section>
@@ -2789,11 +2808,21 @@ const MUSCLE_RULES = [
   [/chest|bench|fly|push ?up|pec deck/i, "Klatka"],
   [/crunch|knee raise|leg raise|plank|\bab\b|abs|sit ?up|twist|oblique|wheel/i, "Brzuch"],
 ];
+// Kolejność i grupy wierszy w tabeli serii; grupy bez danych pomijane. Łydki i przywodziciele (dziś bez serii) w nogach, „Inne” na końcu.
+const MUSCLE_SECTIONS = [
+  ["Pchanie", ["Klatka", "Barki", "Barki boczne", "Triceps"]],
+  ["Ciągnięcie", ["Plecy", "Tył barków", "Biceps"]],
+  ["Nogi", ["Czworogłowe uda", "Dwugłowe uda", "Pośladki", "Łydki", "Przywodziciele"]],
+  ["Brzuch", ["Brzuch"]],
+  ["Inne", ["Inne"]],
+];
 const muscleOf = name => (MUSCLE_RULES.find(([re]) => re.test(name)) || [null, "Inne"])[1];
 // Skala objętości: każdy kolor ≥ 3:1 względem karty, ciemny tekst na każdym ≥ 4.5:1.
 const RAMP = ["#3f80da", "#5b95e3", "#80aeec", "#a8c8f3", "#d0e2fa"];
 const rampIdx = (v, max) => v <= 0 ? -1 : Math.min(4, Math.floor((v / max) * 5 - 1e-9));
 const rampInk = () => "#0d0d0d";
+// Szerokości kolumn mapy cieplnej serii (px): etykieta grupy, minimum tygodnia (reszta szerokości po równo), tydzień bez treningów.
+const HEAT_COL = { label: 132, week: 48, empty: 26 };
 
 function renderMuscles() {
   const wk = weeks(MODEL.workouts);
@@ -2817,17 +2846,21 @@ function renderMuscles() {
   const push = avg("Klatka") + avg("Barki") + avg("Triceps"), pull = avg("Plecy") + avg("Biceps") + avg("Tył barków");
   if (push > 0 && pull === 0) warn.push("Brak ćwiczeń ciągnących (plecy, biceps, tył barków). Dodaj wiosłowanie i ściąganie drążka.");
   else if (pull > 0 && push / pull > 1.25)
-    warn.push(`Push : pull ≈ ${nf(push / pull, 1)} : 1. Ćwiczenia pchające (klatka, barki, triceps) dostają średnio ${nf(push, 1)} serii/tydz., ciągnące (plecy, biceps, tył barków) ${nf(pull, 1)}, w tym same plecy tylko ${nf(avg("Plecy"), 1)}. Ciągnięcia powinno być mniej więcej tyle co pchania; wyrównuje je praca pleców i tyłu barków w planie. Według założeń objętość zwiększamy dopiero przy zastoju, więc dodatkowe serie pleców to temat na przegląd planu (wskaźnik „Stan planu”).`);
+    // Krótka linijka, pełne wyjaśnienie pod rozwijanym „Dlaczego?”.
+    warn.push({ t: `Push : pull ≈ ${nf(push / pull, 1)} : 1 – pchania więcej niż ciągnięcia`, id: "why-pushpull", why:
+      `Push : pull ≈ ${nf(push / pull, 1)} : 1. Ćwiczenia pchające (klatka, barki, triceps) dostają średnio ${nf(push, 1)} serii/tydz., ciągnące (plecy, biceps, tył barków) ${nf(pull, 1)}, w tym same plecy tylko ${nf(avg("Plecy"), 1)}. Ciągnięcia powinno być mniej więcej tyle co pchania; wyrównuje je praca pleców i tyłu barków w planie. Według założeń objętość zwiększamy dopiero przy zastoju, więc dodatkowe serie pleców to temat na przegląd planu (wskaźnik „Stan planu”).` });
   const q = avg("Czworogłowe uda"), h = avg("Dwugłowe uda");
   if (q > 0 && h === 0) warn.push("Brak ćwiczeń na dwugłowe uda (np. uginanie nóg, martwy ciąg rumuński).");
   else if (h > 0 && q / h > CFG.quadHamMaxRatio) warn.push(`Czworogłowe dostają ${nf(q / h, 1)}× więcej serii niż dwugłowe uda. Dodaj uginanie nóg lub martwy ciąg rumuński.`);
   const missing = ["Klatka", "Plecy", "Barki", "Barki boczne", "Tył barków", "Biceps", "Triceps", "Czworogłowe uda", "Dwugłowe uda", "Brzuch"].filter(g => !groups.has(g));
   if (missing.length) info.push(`Bez bezpośrednich serii: ${missing.join(", ")}.`);
   const empty = MODEL.workouts.flatMap(w => w.sets).filter(s => s.type !== "warmup" && s.rpe != null && s.rpe <= CFG.emptySetMaxRpe).length;
-  if (empty) info.push(`${empty} ${plSerie(empty)} z RPE ≤ ${nf(CFG.emptySetMaxRpe, 1)} nie liczę (pusta objętość wg założeń).`);
+  // Informacja o pustych seriach: przypis pod tabelą (obok tygodnia w toku), nie osobna ramka.
   if (!warn.length) info.unshift("Proporcje między głównymi grupami wyglądają na zrównoważone.");
   $("#muscle-warn").innerHTML =
-    warn.map(t => `<div class="warn"><span class="ic">⚠</span><span>${esc(t)}</span></div>`).join("") +
+    warn.map(w => typeof w === "string" ? `<div class="warn"><span class="ic">⚠</span><span>${esc(w)}</span></div>`
+      : `<div class="warn"><span class="ic">⚠</span><div class="w-body"><span>${esc(w.t)}</span> ${toggleBtn(w.id, "disc w-why", "Dlaczego?")}` +
+        `<div id="${w.id}" class="w-more"${OPEN.has(w.id) ? "" : " hidden"}>${esc(w.why)}</div></div></div>`).join("") +
     info.map(t => `<div class="info"><span class="ic">ℹ</span><span>${esc(t)}</span></div>`).join("");
 
   const maxCell = Math.max(...rows.flatMap(g => groups.get(g)), 1);
@@ -2835,18 +2868,50 @@ function renderMuscles() {
   const today = midnight(new Date());
   const cur = wk.findIndex(w => today >= w.start && today <= w.end);
   const curTxt = cur < 0 ? "" : `tydzień w toku (do ${fmtDate(wk[cur].end)}), liczby jeszcze mogą wzrosnąć`;
-  $("#muscle-heat").innerHTML = `<thead><tr><th class="rl"></th>${wk.map((w, i) => i === cur
-      ? `<th title="${esc(curTxt)}">${esc(fmtDate(w.start))}*</th>` : `<th>${esc(fmtDate(w.start))}</th>`).join("")}<th class="tot">Razem</th></tr></thead>
-    <tbody>${rows.map(g => `<tr><td class="rl">${esc(g)}</td>${groups.get(g).map((v, i) => {
+  // Kolumny: etykieta, tygodnie po równo (tydzień bez treningów wąski, z kreską). Na telefonie tabela przewijana w kontenerze.
+  const isEmpty = wk.map(w => !w.items.length);
+  const nEmpty = isEmpty.filter(Boolean).length;
+  const heat = $("#muscle-heat");
+  heat.style.minWidth = `${HEAT_COL.label + (wk.length - nEmpty) * HEAT_COL.week + nEmpty * HEAT_COL.empty}px`;
+  heat.innerHTML = `<colgroup><col style="width:${HEAT_COL.label}px">${isEmpty.map(e => e ? `<col style="width:${HEAT_COL.empty}px">` : "<col>").join("")}</colgroup>
+    <thead><tr><th class="rl"></th>${wk.map((w, i) => isEmpty[i]
+      ? `<th class="empty" data-tip="${esc(fmtDate(w.start))}: tydzień bez treningów"><span aria-hidden="true">–</span><span class="vh">${esc(fmtDate(w.start))}, bez treningów</span></th>`
+      : i === cur ? `<th title="${esc(curTxt)}">${esc(fmtDate(w.start))}*</th>` : `<th>${esc(fmtDate(w.start))}</th>`).join("")}</tr></thead>
+    ${MUSCLE_SECTIONS.map(([sec, list]) => [sec, list.filter(g => groups.has(g))]).filter(([, list]) => list.length).map(([sec, list]) => `<tbody>
+      <tr class="grp"><th scope="rowgroup" class="rl">${esc(sec)}</th><td colspan="${wk.length}"></td></tr>
+      ${list.map(g => `<tr><td class="rl">${esc(g)}</td>${groups.get(g).map((v, i) => {
+      if (isEmpty[i]) return `<td class="hc empty"></td>`;
       const k = rampIdx(v, maxCell);
       const style = k < 0 ? `background:var(--surface-2);color:var(--text-muted)` : `background:${RAMP[k]};color:${rampInk(k)}`;
       return `<td class="hc" style="${style}" title="${esc(g)}, tydzień od ${esc(fmtDate(wk[i].start))}${i === cur ? " (w toku)" : ""}: ${v} serii">${v || "·"}</td>`;
-    }).join("")}<td class="tot">${sum(groups.get(g), v => v)}</td></tr>`).join("")}</tbody>`;
+    }).join("")}</tr>`).join("")}</tbody>`).join("")}`;
+  // Znaczniki zmiany planu (start cyklu, isCycleStart) jak na wykresach progresu: przerywana linia z rombem na granicy tygodni
+  // najbliższej dacie startu (pn–śr: przed tym tygodniem, czw–nd: po nim). Pozycja w calc() z szerokości kolumn, więc bez przeliczania przy zmianie okna.
+  const nFull = wk.length - nEmpty;
+  const edgeX = b => { const e = isEmpty.slice(0, b).filter(Boolean).length;
+    return `calc(${HEAT_COL.label + e * HEAT_COL.empty}px + (100% - ${HEAT_COL.label + nEmpty * HEAT_COL.empty + 8}px) * ${(b - e) / nFull})`; };
+  const cycles = DECISIONS.filter(isCycleStart).map(d => {
+    const day = midnight(d.date), i = wk.findIndex(w => day >= w.start && day <= w.end);
+    if (i < 0) return null;
+    const b = i + ((d.date.getDay() + 6) % 7 >= 3 ? 1 : 0);
+    return { d, b, n: d === PLAN_CHANGES[0] ? 1 : cycleOf(d.date) + 1 };
+  }).filter(Boolean);
+  const box = $("#muscle-box");
+  box.style.minWidth = `${parseFloat(heat.style.minWidth) + 8}px`;
+  box.querySelectorAll(".cyc-mark").forEach(x => x.remove());
+  for (const c of cycles) {
+    const tip = `Zmiana planu: cykl ${c.n} od ${fmtDateLong(c.d.date)} (decyzje.md). ${c.d.change}`;
+    box.insertAdjacentHTML("beforeend", `<div class="cyc-mark" aria-hidden="true" style="left:${edgeX(c.b)}"><span class="cyc-dia" data-tip="${esc(tip)}"></span></div>`);
+  }
+  const notes = [];
+  if (cur >= 0) notes.push(`* ${esc(curTxt)}.`);
+  if (empty) notes.push(esc(`${empty} ${plSerie(empty)} z RPE ≤ ${nf(CFG.emptySetMaxRpe, 1)} nie liczę (pusta objętość wg założeń).`));
+  if (cycles.length) notes.push(`<span class="cyc-key" aria-hidden="true"></span>zmiana planu: ${cycles.map(c => `cykl ${c.n} od ${esc(fmtDate(c.d.date))}`).join(", ")} (linia na granicy tygodni najbliższej tej dacie).`);
   const note = $("#muscle-note");
-  note.hidden = cur < 0;
-  note.textContent = cur < 0 ? "" : `* ${curTxt}.`;
+  note.hidden = !notes.length;
+  note.innerHTML = notes.map(t => `<div>${t}</div>`).join("");
   // Otwarta na najnowszych tygodniach (prawa krawędź); pierwsza kolumna przypięta.
-  const heatWrap = $("#muscle-heat").parentElement;
+  const heatWrap = heat.closest(".table-wrap");
   heatWrap.scrollLeft = heatWrap.scrollWidth;
 
   const byGroup = new Map();
