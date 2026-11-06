@@ -207,12 +207,6 @@ table.order th { white-space: normal; vertical-align: bottom; }
 .rec-sort { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 15px; color: var(--text-secondary); }
 .rec-sort select { min-height: 44px; background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--control-border); border-radius: 8px; padding: 8px 10px; font: inherit; flex: 1; min-width: 0; }
 @media (min-width: 701px) { .rec-sort { display: none; } }
-.hb-track { position: relative; display: block; height: 14px; }
-.hb-band { position: absolute; top: 0; bottom: 0; background: rgba(120,190,255,0.08); border-left: 1px dashed var(--text-muted); border-right: 1px dashed var(--text-muted); }
-.hb-base { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 1.5px dashed var(--text-muted); }
-.hbar .hb-fill { position: relative; top: 2px; }
-.hb-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; color: var(--text-muted); margin-top: 8px; align-items: center; }
-.hb-legend i { display: inline-block; vertical-align: middle; margin-right: 5px; }
 .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; }
 .nc { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; min-width: 0; transition: transform var(--t-fast) ease, box-shadow var(--t-fast) ease; }
 .nc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
@@ -242,19 +236,16 @@ table.order th { white-space: normal; vertical-align: bottom; }
 /* Gotowe do podniesienia: limit z decyzje.md nad listą, lista bez wyróżniania (dashboard niczego nie wybiera). */
 .info.ready .ready-note { margin: 2px 0 4px; color: var(--text-primary); }
 .info.ready ul { margin: 0; padding-left: 18px; }
-/* Dwa wewnętrzne panele po pół szerokości (na wąskim ekranie jeden pod drugim). */
-.muscle-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+/* Wewnętrzny panel na pełną szerokość karty. */
+.muscle-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 14px; }
 .muscle-row > .panel { min-width: 0; background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
 .panel .table-wrap { margin: 0; padding: 0; }
+.panel .note { color: var(--text-muted); font-size: 14px; margin-top: 8px; }
 .panel th { background: var(--surface-2); }
 .panel table.heat td.hc { border-color: var(--surface-2); }
 .panel table.sticky-first th:first-child, .panel table.sticky-first td:first-child,
 .panel table.heat.sticky-first tbody tr:hover td:first-child { background: var(--surface-2); }
-@media (max-width: 860px) { .muscle-row { grid-template-columns: minmax(0, 1fr); } }
 h4 { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
-.hbar { display: grid; grid-template-columns: minmax(96px, 130px) minmax(0, 1fr) 40px; align-items: center; gap: 8px; font-size: 15px; padding: 3px 0; }
-.hb-fill { display: block; height: 10px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 2px; }
-.hb-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 table.heat { min-width: 0; width: auto; }
 table.heat th { cursor: default; position: static; font-weight: 500; font-size: 13px; color: var(--text-muted); text-align: center; padding: 4px; }
 table.heat th.rl, table.heat td.rl { text-align: left; color: var(--text-secondary); font-size: 14px; padding: 4px 10px 4px 0; border-bottom: 0; }
@@ -476,8 +467,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
     </div>
     <div id="muscle-warn"></div>
     <div class="muscle-row">
-      <div class="panel"><h4>Średnio serii na tydzień</h4><div id="muscle-avg"></div></div>
-      <div class="panel"><h4>Serie w poszczególnych tygodniach</h4><div class="table-wrap" tabindex="0" role="region" aria-label="Serie w poszczególnych tygodniach"><table class="heat sticky-first" id="muscle-heat"></table></div></div>
+      <div class="panel"><h4>Serie w poszczególnych tygodniach</h4><div class="table-wrap" tabindex="0" role="region" aria-label="Serie w poszczególnych tygodniach"><table class="heat sticky-first" id="muscle-heat"></table></div><div class="note" id="muscle-note" hidden></div></div>
     </div>
     <details><summary>Jak przypisałem ćwiczenia do grup</summary><div class="map-list" id="muscle-map"></div></details>
   </section>
@@ -1246,7 +1236,7 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
   - `kategoria` dla pojedynczego ćwiczenia: zaczyna się od nazwy kategorii (`zlozone_maszyna`, `izolacja`, `brzuch`, `zlozone_wolne`). Dopisujemy go **tylko wtedy, gdy ćwiczenie zmienia kategorię**; od podanej daty nadpisuje przypisanie z `FAMILIES` w dashboardzie.
   - `ciezar` zaczynający się od „<N> kg” ze słowem „budowanie”, np. „6 kg, budowanie do 3 × 12”: od daty wpisu pierwszy ciąg pełnych treningów na N kg to nowy ciężar, więc treningi poniżej celu są oceniane jako budowanie powtórzeń, także gdy z danych nie widać podniesienia (np. pierwszy trening ćwiczenia ze zmianą ciężaru w trakcie).
   - `wyjatek` z Ćwiczenie = `*`: dzień z kolumny Data (albo okres do daty końca) wyłączony z oceny progresji (sygnały, zastoje, karty progresu). Wpis ze słowem „limit” w treści, np. „… nie przekroczenie limitu (do RRRR-MM-DD)”, to wyjątek od limitu treningów w tygodniu: tydzień (od poniedziałku do niedzieli, jak w dashboardzie), którego wszystkie treningi są w okresie wpisu, dashboard liczy jako zgodny z limitem, a dni treningowe z rzędu w tym okresie nie są ostrzeżeniem (bez ⚠, bez ℹ i bez dopisku). Taki wpis nie wyłącza treningów z oceny progresji.
-  - `zasada` z Ćwiczenie = `*`, której treść wymienia FBW_A / FBW_B / FBW_C: zmiana planu na rutyny; najwcześniejsza Data takiego wpisu to początek rozpoznawania rutyn po tytule treningu (kontrola kolejności), a wpis jest znacznikiem na kartach progresu. Tekst „trening DD.MM (tytuł) = FBW_X” (rok z Daty) przypisuje rutynę FBW_X treningowi z tego dnia niezależnie od tytułu w Hevy.
+  - `zasada` z Ćwiczenie = `*`, której treść wymienia FBW_A / FBW_B / FBW_C: zmiana planu na rutyny; najwcześniejsza Data takiego wpisu to początek rozpoznawania rutyn po tytule treningu (kontrola kolejności), a wpis jest znacznikiem na kartach progresu. Znacznikiem jest też taki wpis z datą początku kolejnego cyklu planu (`CFG.cycleFrom`, np. cykl 2 od 2026-11-08); listy ćwiczeń rutyn każdego cyklu są w `PLAN` i w założeniach (sekcja 3). Tekst „trening DD.MM (tytuł) = FBW_X” (rok z Daty) przypisuje rutynę FBW_X treningowi z tego dnia niezależnie od tytułu w Hevy.
 - **Data końca (każdy typ):** „do RRRR-MM-DD” w kolumnie Zmiana (małymi literami, data nie wcześniejsza niż Data) oznacza, że wpis obowiązuje od Daty do tej daty włącznie. Dashboard bierze ją pod uwagę przy wpisach opisujących stan w czasie: `wyjatek`, `kategoria`, `alias`, `maszyna` z podziałem według notatki oraz `zasada` „Tydzień utrwalenia…”. Bez daty końca `wyjatek` dotyczy tylko dnia z kolumny Data, a pozostałe wpisy obowiązują od Daty bezterminowo. Przy wpisach-zdarzeniach (np. zmiana ciężaru, kolejność, decyzja przerywająca licznik zastoju) i okresach maszyn z własnym zapisem („przed RRRR-MM-DD”, „Okres niepewny do RRRR-MM-DD”) data końca jest tylko informacją.
 - Zasady liczenia z wpisów `zasada` dla `*` z 16.10 (RPE ostatniej serii, limit podniesień), 22.10 (kolejność listy „gotowe”), 25.10 (budowanie powtórzeń, zastój przy budowaniu, rozgrzewka) i 27.10 (wzrost sumy wobec najlepszej sumy na ciężarze, kolejność ćwiczenia powiązanego w tym samym treningu) dashboard bierze z `CFG` w szablonie (`raiseMaxLastRpe`, `raiseRpeFrom`, `maxRaisesPerSession`, `relatedLifts`, `buildBestFrom`, `relatedOrderFrom`) i z kodu, nie z treści wpisu: zmiana takiej zasady wymaga też zmiany `CFG`. Tak samo kontrola kolejności (wpisy `kolejnosc` dla `*` z 27.10 i 29.10): wszystkie ruchy z rutyny (pominięcie = informacja ℹ) i izolacja po swoim ćwiczeniu głównym (pary z `CFG.relatedLifts`); wcześniejszych wpisów `kolejnosc` kontrola kolejności nie czyta.
 - W tekście komórek nie używamy znaku `|`.
@@ -1296,6 +1286,8 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-10-29 | * | kolejnosc | kolejność: wszystkie ćwiczenia z rutyny (pominięcie = informacja) i izolacja po swoim ćwiczeniu głównym; reszta dowolna, brzuch w dowolnym miejscu | Sztywna kolejność (leg press pierwszy, shoulder press pierwszy w bloku góry, brzuch po leg pressie, złożone przed izolacją) nie do utrzymania przy tłoku; izolacja przed ćwiczeniem głównym męczy mięśnie, które ono potrzebuje |
 | 2026-10-30 | * | zasada | Czas treningu 75–95 min | Decyzja Jakuba; średni czas treningu 75 min (20 treningów do 29.10), dotychczasowa norma 60–75 min (CFG.durationBand) |
 | 2026-10-30 | Shoulder Press (Machine Plates) | zasada | Przerwa 2 min przed 3. serią | 3. seria na 20 kg kończy się na 8 powtórzeniach (22.10, 27.10, 29.10: 10/10/8); tak jak przy chest pressie (wpis z 2026-10-08) |
+| 2026-11-08 | * | zasada | Cykl 2: rutyny FBW_A, FBW_B, FBW_C w nowym zestawie (góra w priorytecie); leg press 2×, hip thrust i leg curl 1×, bez leg extension; brzuch 2× w tygodniu | Zestaw ćwiczeń cyklu 2 od 2026-11-08; listy rutyn w założeniach, sekcja 3 |
+| 2026-11-10 | * | zasada | Rozgrzewka także przed hip thrustem | Hip thrust w cyklu 2 (FBW_B); dozwolone dwie serie rozgrzewkowe; kontrola kolejności wymaga rozgrzewki od 2026-11-10 (CFG.hipThrustWarmupFrom) |
 </script>
 <script>
 "use strict";
@@ -1346,14 +1338,17 @@ const CFG = {
   defaultMachineRefSessions: 3,   // tyle poprzednich treningów tej maszyny daje medianę ciężaru roboczego
   defaultMachineMaxDev: 0.15,     // ostrzeżenie, gdy ciężar roboczy odbiega od mediany o więcej (15%)
   durationBand: [75, 95],  // docelowa długość treningu (min), decyzje.md 30.10
-  weeklySetsBase: 9,       // obecny poziom serii / partię / tydzień
   quadHamMaxRatio: 2.5,    // ostrzeżenie, gdy czworogłowe dostają więcej niż tyle razy serii co dwugłowe (plan celowo 2 : 1)
-  weeklySetsTarget: [10, 20],   // zakres docelowy serii / partię / tydzień
   // Stan planu (nagłówek): zmiana planu wynika z wyników, nie z kalendarza.
   planWindowDays: 28,      // okno oceny: tyle ostatnich dni od najnowszego treningu
   planProgressShare: 0.5,  // „plan działa”: ciężar roboczy wzrósł w co najmniej takiej części ćwiczeń
   planStallMain: 3,        // „czas na przegląd planu”: tyle głównych ćwiczeń (złożonych) w zastoju jednocześnie
   planMinSessions: 12,     // cel regularności (decyzje.md 28.10): 3 treningi w tygodniu pn–nd = 12 w oknie; poniżej najpierw regularność, nie zmiana planu
+  // Cykle planu (zalozenia sekcja 3): cykl 1 od początku rozpoznawania rutyn, kolejne od tych dat (cykl 2: decyzje.md 2026-11-08).
+  // Rutyny każdego cyklu w PLAN (pole routines). Wpis „zasada” dla * z FBW_A / B / C z datą początku cyklu = znacznik na kartach progresu.
+  cycleFrom: ["2026-11-08"],
+  hipThrust: "Hip Thrust (Machine)",   // nazwa w Hevy (niepotwierdzona; w FAMILIES rozpoznaję każde ćwiczenie z „Hip Thrust” w nazwie)
+  hipThrustWarmupFrom: "2026-11-10",   // rozgrzewka wymagana także przed hip thrustem od tego dnia (decyzje.md 2026-11-10; dwie serie rozgrzewkowe dozwolone)
   // Aliasy (błędnie wybrane ćwiczenia) i okresy maszyn są w decyzje.md (typy „alias” i „maszyna”).
 };
 // Rodziny ruchu: zamienniki robiące te same partie (gdy maszyna zajęta) trafiają do jednej grupy.
@@ -1363,6 +1358,8 @@ const FAMILIES = [
   ["Leg press", /leg press/i, "zlozone_maszyna"],
   ["Prostowanie nóg", /leg extension/i, "izolacja"],
   ["Uginanie nóg", /leg curl/i, "izolacja"],
+  // Każda nazwa z „Hip Thrust” (nazwa w Hevy niepotwierdzona, główna w CFG.hipThrust); grupa mięśniowa: pośladki (MUSCLE_RULES).
+  ["Hip thrust", /hip thrust/i, "izolacja"],
   // Maszyny wydzielone z notatki (np. „Chest Press (talerze)” / „(stos)”, decyzje.md) trafiają tu po nazwie.
   ["Wyciskanie na klatkę", /chest press|bench press/i, "zlozone_maszyna"],
   ["Wyciskanie nad głowę", /shoulder press|overhead press|military/i, "zlozone_maszyna"],
@@ -1386,24 +1383,27 @@ const categoryOf = (name, date = new Date()) => {
   return cat === "zlozone_maszyna" && CFG.freeWeight.test(name) ? "zlozone_wolne" : cat;
 };
 // Kolejność ruchów w sekcji „Sygnały z danych” (kolejność FBW); `main` = ćwiczenie wyznaczające rodzinę ruchu.
-// `routines`: rutyny, w których ruch występuje (FBW_A / FBW_B / FBW_C, robione po kolei A → B → C, od wpisu
-// „zasada” dla * w decyzje.md wymieniającego FBW_A); w kontroli kolejności ruchy wymagane w rutynie.
+// `routines`: dla każdego cyklu (CFG.cycleFrom; cykl 1, cykl 2, …) rutyny, w których ruch występuje (FBW_A / FBW_B / FBW_C, robione po kolei
+// A → B → C, od wpisu „zasada” dla * w decyzje.md wymieniającego FBW_A); w kontroli kolejności ruchy wymagane w rutynie, "" = poza rutynami cyklu.
 const PLAN = [
-  { main: "Leg Press (Machine)", label: "Leg press", routines: ["A", "B", "C"] },
-  { main: "Leg Extension (Machine)", label: "Leg extension", routines: ["A"] },
-  { main: "Seated Leg Curl (Machine)", label: "Seated leg curl", routines: ["A", "C"] },
-  { main: "Seated Shoulder Press (Machine)", label: "Wyciskanie nad głowę", routines: ["A", "B", "C"] },
-  { main: "Chest Press (Machine)", label: "Wyciskanie na klatkę", routines: ["A", "B", "C"] },
-  { main: "Seated Row (Machine)", label: "Wiosłowanie", routines: ["A", "B", "C"] },
-  { main: "Chest Fly (Machine)", label: "Rozpiętki", routines: ["B"] },
-  { main: "Rear Delt Reverse Fly (Machine)", label: "Tył barków", routines: ["B"] },
-  { main: "Lat Pulldown (Machine)", label: "Ściąganie drążka", routines: ["A", "C"] },
-  { main: "Lateral Raise (Dumbbell)", label: "Wznosy bokiem", routines: ["B", "C"] },
-  { main: "Preacher Curl (Machine)", label: "Biceps", routines: ["A", "B", "C"] },
-  { main: "Seated Triceps Press", label: "Triceps", routines: ["A", "B", "C"] },
-  { main: "Knee Raise Parallel Bars", label: "Brzuch", routines: ["A", "B", "C"] },
+  { main: "Leg Press (Machine)", label: "Leg press", routines: ["ABC", "AC"] },
+  { main: "Leg Extension (Machine)", label: "Leg extension", routines: ["A", ""] },
+  { main: "Seated Leg Curl (Machine)", label: "Seated leg curl", routines: ["AC", "B"] },
+  { main: CFG.hipThrust, label: "Hip thrust", routines: ["", "B"] },
+  { main: "Seated Shoulder Press (Machine)", label: "Wyciskanie nad głowę", routines: ["ABC", "ABC"] },
+  { main: "Chest Press (Machine)", label: "Wyciskanie na klatkę", routines: ["ABC", "ABC"] },
+  { main: "Seated Row (Machine)", label: "Wiosłowanie", routines: ["ABC", "ABC"] },
+  { main: "Chest Fly (Machine)", label: "Rozpiętki", routines: ["B", "BC"] },
+  { main: "Rear Delt Reverse Fly (Machine)", label: "Tył barków", routines: ["B", "AC"] },
+  { main: "Lat Pulldown (Machine)", label: "Ściąganie drążka", routines: ["AC", "AC"] },
+  { main: "Lateral Raise (Dumbbell)", label: "Wznosy bokiem", routines: ["BC", "ABC"] },
+  { main: "Preacher Curl (Machine)", label: "Biceps", routines: ["ABC", "ABC"] },
+  { main: "Seated Triceps Press", label: "Triceps", routines: ["ABC", "ABC"] },
+  { main: "Knee Raise Parallel Bars", label: "Brzuch", routines: ["ABC", "AB"] },
 ];
 const ROUTINE_NAMES = ["A", "B", "C"];
+// Cykl planu w dniu `date`: 0 = cykl 1, 1 = cykl 2 (od CFG.cycleFrom[0]) …
+const cycleOf = date => CFG.cycleFrom.filter(s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d) <= date; }).length;
 
 const $ =(s, el = document) => el.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -2268,15 +2268,23 @@ function variantOf(w) {
 
 // Tylko kontrola rozgrzewek: seria rozgrzewkowa wymagana przed leg pressem, shoulder pressem (stos i talerze) i chest pressem na maszynie.
 // Wolne ciężary (CFG.freeWeight, np. Shoulder Press (Dumbbell) z hotelu) i pozostałe ćwiczenia jej nie wymagają.
+// Hip thrust (każda nazwa z rodziny): od CFG.hipThrustWarmupFrom. Liczba serii rozgrzewkowych nie jest oceniana (dozwolone dwie).
 const HEAVY = /leg press|shoulder press|chest press/i;
-const needsWarmup = n => HEAVY.test(n) && !CFG.freeWeight.test(n);
+const needsWarmup = (n, date) => HEAVY.test(n) && !CFG.freeWeight.test(n) ||
+  familyOf(n) === familyOf(CFG.hipThrust) && date >= isoDay(CFG.hipThrustWarmupFrom);
 const COMPOUND = new Set(["zlozone_maszyna", "zlozone_wolne"]);
 const seqOf = w => [...new Set(w.sets.map(s => s.ex))].filter(n => MODEL.exByName.get(n).kind !== "cardio");
-// Ruchy wymagane w treningu: pozycje PLAN z rutyną treningu; trening bez rozpoznanej rutyny: ruchy wspólne dla wszystkich rutyn.
+// Ruchy wymagane w treningu: pozycje PLAN z rutyną treningu w cyklu z dnia treningu; trening bez rozpoznanej rutyny: ruchy wspólne dla wszystkich rutyn cyklu.
 const slot = (main, label) => ({ label, fam: familyOf(main) });
-const ROUTINE_SLOTS = Object.fromEntries(ROUTINE_NAMES.map(n => [n, PLAN.filter(r => r.routines.includes(n)).map(r => slot(r.main, r.label))]));
-const COMMON_SLOTS = PLAN.filter(r => ROUTINE_NAMES.every(n => r.routines.includes(n))).map(r => slot(r.main, r.label));
-const slotsFor = w => ROUTINE_SLOTS[routineOf(w)] || COMMON_SLOTS;
+const ROUTINE_SLOTS = CFG.cycleFrom.concat([null]).map((_, c) =>
+  Object.fromEntries(ROUTINE_NAMES.map(n => [n, PLAN.filter(r => r.routines[c].includes(n)).map(r => slot(r.main, r.label))])));
+const COMMON_SLOTS = ROUTINE_SLOTS.map((_, c) => PLAN.filter(r => ROUTINE_NAMES.every(n => r.routines[c].includes(n))).map(r => slot(r.main, r.label)));
+// Obecny cykl: z dnia dzisiejszego albo najnowszego treningu, jeśli jest późniejszy (np. fikcyjne treningi w testach).
+const cycleNow = () => cycleOf(new Date(Math.max(Date.now(), +MODEL.workouts[MODEL.workouts.length - 1].start)));
+// Ćwiczenie z rutyn obecnego cyklu (rodzina ruchu z pozycji PLAN z rutynami w tym cyklu). Spoza rutyn (np. Leg Extension od cyklu 2):
+// bez listy „gotowe”, zastojów i „do obserwacji”; historia zostaje na wykresach i w rekordach.
+const inCurrentRoutines = name => { const c = cycleNow(); return PLAN.some(r => r.routines[c] && familyOf(r.main) === familyOf(name)); };
+const slotsFor = w => { const c = cycleOf(w.start); return ROUTINE_SLOTS[c][routineOf(w)] || COMMON_SLOTS[c]; };
 
 // Kontrola kolejności (decyzje.md 29.10): wszystkie ruchy z rutyny (pominięcie = informacja ℹ, liczona jako zgodna; zamiennik z tej samej
 // rodziny ruchu liczy się jako ten ruch, ćwiczenie spoza rutyny nie jest błędem) i izolacja po swoim ćwiczeniu głównym; reszta kolejności dowolna.
@@ -2290,7 +2298,7 @@ function orderCheck(w) {
   const pairs = seq.flatMap(n => seq.filter(m => m !== n && relatedOf(n).some(x => m === x || sourceOf(m) === x)).map(m => ({ iso: n, main: m })));
   const early = pairs.filter(p => seq.indexOf(p.iso) < seq.indexOf(p.main));
   r.iso = !pairs.length ? { st: "na", t: "–" } : early.length ? { st: "bad", t: early.map(p => `${short(p.iso)} przed ${short(p.main)}`).join(", ") } : { st: "ok" };
-  const noWarm = seq.filter(n => needsWarmup(n) && !w.sets.some(s => s.ex === n && s.type === "warmup"));
+  const noWarm = seq.filter(n => needsWarmup(n, w.start) && !w.sets.some(s => s.ex === n && s.type === "warmup"));
   r.warm = noWarm.length ? { st: "bad", t: "brak: " + noWarm.map(short).join(", ") } : { st: "ok" };
   // Upadek (albo RPE powyżej CFG.cleanMaxRpe) we wszystkich ćwiczeniach złożonych wg kategorii z FAMILIES / decyzje.md.
   const fail = [...new Set(w.sets.filter(s => COMPOUND.has(categoryOf(s.ex, w.start)) && (s.type === "failure" || s.rpe > CFG.cleanMaxRpe)).map(s => s.ex))];
@@ -2327,7 +2335,6 @@ function renderSignals() {
   let i = 0;
   const ready = [];
   const rows = PLAN.flatMap(r => {
-    i++;
     const fam = familyOf(r.main);
     // Każda aktywna maszyna z rodziny ruchu osobno (osobny ciężar), od ostatnio używanej.
     // Ćwiczenia z masą ciała (kind "reps") mają własną ocenę (repsStats); ćwiczenie główne z PLAN zawsze pierwsze.
@@ -2336,10 +2343,23 @@ function renderSignals() {
       .map(x => ({ e: x, s: x.kind === "reps" ? repsStats(x) : exStats(x) })).filter(x => x.s)
       .sort((a, b) => (b.e.name === r.main) - (a.e.name === r.main) || lastUse(b.e) - lastUse(a.e));
     const machines = all.filter(x => active(x.e));
-    // Tag z rutynami, gdy ruch nie występuje we wszystkich.
-    const tag = r.routines.length < ROUTINE_NAMES.length ? ` <span class="tag">${r.routines.map(n => "FBW_" + n).join(", ")}</span>` : "";
+    // Ruch spoza rutyn obecnego cyklu bez żadnych danych (np. hip thrust przed cyklem 2) nie ma wiersza.
+    const routines = r.routines[cycleNow()];
+    if (!routines && !all.length) return [];
+    i++;
+    // Tag z rutynami obecnego cyklu, gdy ruch nie występuje we wszystkich.
+    const tag = routines.length < ROUTINE_NAMES.length ? ` <span class="tag">${routines ? [...routines].map(n => "FBW_" + n).join(", ") : "poza rutynami"}</span>` : "";
     const head = (k) => `<td class="nw dim">${k ? "" : i}</td>
       <td>${k ? "" : `<b>${esc(r.label)}</b>${tag}`}`;
+    // Ruch spoza rutyn obecnego cyklu (od startu cyklu): tylko tag „poza rutynami” i ostatni wynik, bez plakietki sygnału i bez okna
+    // aktywnych maszyn (CFG.signalsActiveDays); każda maszyna z danymi osobno. Historia zostaje na wykresach i w rekordach.
+    if (!routines) {
+      const c = cycleNow(), since = c ? ` (od ${fmtDate(isoDay(CFG.cycleFrom[c - 1]))})` : "";
+      return all.map(({ e, s }, k) => `<tr>${head(k)}<div class="why">${esc(e.name)}</div></td>
+        <td class="dim">${esc(s.reps ? repsDesc(s.li) : desc(s.li))}</td><td class="nw dim">—</td>
+        <td><div class="why">Poza rutynami obecnego cyklu${esc(since)}: bez oceny, listy „gotowe”, zastojów i „Stanu planu”.</div></td>
+        <td>${decCell(e.name)}</td></tr>`);
+    }
     if (!machines.length) {
       // Same treningi z okresu niepewnego (decyzje.md): nie ma z czym porównywać, do pierwszego treningu na nazwanej maszynie.
       const unsure = MODEL.exercises.filter(x => familyOf(x.name) === fam && x.uncertain && x.progress.length)
@@ -2364,7 +2384,7 @@ function renderSignals() {
       const sig = signalOf(e, s), li = s.li;
       // Kolejność listy „gotowe” (decyzje.md 22.10): średnie RPE wszystkich serii roboczych ostatniego ocenianego treningu (bez rozgrzewkowych,
       // także serie lżejsze i testowa), nie tylko serii na ciężarze roboczym.
-      if (sig.ready) ready.push({ e, s, rpe: mean(s.lf.work.filter(x => x.rpe != null).map(x => x.rpe)) });
+      if (sig.ready && inCurrentRoutines(e.name)) ready.push({ e, s, rpe: mean(s.lf.work.filter(x => x.rpe != null).map(x => x.rpe)) });
       // Ostatni trening nieoceniany (skrócony albo z podbijaniem): pokazuję też ostatni pełny.
       const skipped = !li.full && s.lf !== li;
       const extra = skipped && li.mode === "normal" ? `Trening z ${fmtDate(li.p.date)} skrócony (${li.work.length} ${plSerie(li.work.length)}), oceniam ostatni pełny.` : "";
@@ -2405,8 +2425,9 @@ function renderSignals() {
     Object.entries(CFG.relatedLifts).map(([k, v]) => `${k} ← ${v.join(", ")}`).join("; ") + `; Chest Press (Machine) = obie maszyny, talerze i stos). ` +
     `Podniesienie w tym samym treningu liczy się tylko, gdy ćwiczenie powiązane było w nim wcześniej (kolejność z CSV, CFG.relatedOrderFrom). ` +
     `Treningi skrócone, dni oznaczone w decyzje.md jako wyjątek i maszyny nieużywane od ponad ${CFG.signalsActiveDays} dni pomijam. RPE traktuję pomocniczo. ` +
+    `Ćwiczenia spoza rutyn obecnego cyklu (np. leg extension od cyklu 2) mają w tabeli tylko tag „poza rutynami” i ostatni wynik, bez sygnału, i nie trafiają do listy „gotowe”, zastojów, „do obserwacji” ani „Stanu planu”; ich historia zostaje na wykresach i w rekordach. ` +
     `Ćwiczenia z masą ciała (np. unoszenie kolan) nie mają stałego celu: suma powtórzeń z serii roboczych porównana z poprzednim treningiem tego ćwiczenia ` +
-    `(▲ lepiej, ● tak samo, ▼ gorzej), bez zastojów i podniesień ciężaru. Tag przy ruchu = rutyny, w których występuje (gdy nie we wszystkich).`;
+    `(▲ lepiej, ● tak samo, ▼ gorzej), bez zastojów i podniesień ciężaru. Tag przy ruchu = rutyny obecnego cyklu, w których występuje (gdy nie we wszystkich; „poza rutynami” = ruchu nie ma w rutynach obecnego cyklu).`;
   $("#plan").className = "plan stack";
   $("#plan").innerHTML = `<thead><tr><th>#</th><th>Ruch / maszyna</th><th>Ostatni wynik</th><th>Cel</th><th>Sygnał</th><th>Ostatnia decyzja (decyzje.md)</th></tr></thead>
     <tbody>${rows.join("")}</tbody>`;
@@ -2457,11 +2478,12 @@ function renderOrder() {
   }).join("");
   $("#help-order").innerHTML = `<p>Zasady kolejności i wykonania (decyzje.md):</p>
     <ul>
-      <li><b>Ćwiczenia z rutyny:</b> wszystkie ruchy z rutyny treningu (FBW_A, FBW_B, FBW_C, rozpoznawane po tytule; trening bez rozpoznanej rutyny: ruchy wspólne dla wszystkich rutyn).
+      <li><b>Ćwiczenia z rutyny:</b> wszystkie ruchy z rutyny treningu (FBW_A, FBW_B, FBW_C, rozpoznawane po tytule; trening bez rozpoznanej rutyny: ruchy wspólne dla wszystkich rutyn),
+        według list cyklu obowiązującego w dniu treningu (${esc(CFG.cycleFrom.map((s, k) => `cykl ${k + 2} od ${fmtDate(isoDay(s))}`).join(", "))}; wcześniej cykl 1, CFG.cycleFrom).
         Pominięcie ruchu, np. z powodu tłoku, to ℹ i liczy się jako zgodne. Zamiennik z tej samej rodziny ruchu (np. Shoulder Press (Machine Plates)) liczy się jako ten ruch; ćwiczenie spoza rutyny nie jest błędem.</li>
       <li><b>Izolacja po głównym:</b> izolacja dopiero po swoim ćwiczeniu głównym (kolejność z CSV): ${esc(Object.entries(CFG.relatedLifts).map(([k, v]) => `${k} po: ${v.join(", ")}`).join("; "))}.
         Gdy ćwiczenia głównego w treningu nie było, tej zależności nie oceniam. Reszta kolejności jest dowolna, brzuch w dowolnym miejscu.</li>
-      <li><b>Rozgrzewka:</b> seria rozgrzewkowa przed leg pressem, shoulder pressem (stos i talerze) i chest pressem; przy innych ćwiczeniach jej brak nie jest błędem.</li>
+      <li><b>Rozgrzewka:</b> seria rozgrzewkowa przed leg pressem, shoulder pressem (stos i talerze) i chest pressem, a od ${esc(fmtDate(isoDay(CFG.hipThrustWarmupFrom)))} także przed hip thrustem (dozwolone dwie serie rozgrzewkowe, CFG.hipThrustWarmupFrom); przy innych ćwiczeniach jej brak nie jest błędem.</li>
       <li><b>Bez upadku w złożonych:</b> w ćwiczeniach złożonych bez serii do upadku i bez RPE powyżej ${nf(CFG.cleanMaxRpe, 1)}.</li>
     </ul>
     <p>✓ = zgodnie, ✗ = niezgodnie (z powodem), ℹ = pominięte ćwiczenie (liczy się jako zgodne), szary tekst = nie dotyczy.
@@ -2470,8 +2492,8 @@ function renderOrder() {
 
 function renderPlateaus() {
   const ws = MODEL.workouts;
-  // Bez maszyn z zamkniętym okresem i bez okresów niepewnych (exStats = null); te zostają tylko na wykresach.
-  const ex = MODEL.exercises.filter(e => e.kind === "weight" && e.progress.length >= 2 && !isClosed(e.name))
+  // Bez maszyn z zamkniętym okresem, bez okresów niepewnych (exStats = null) i bez ćwiczeń spoza rutyn obecnego cyklu; te zostają tylko na wykresach.
+  const ex = MODEL.exercises.filter(e => e.kind === "weight" && e.progress.length >= 2 && !isClosed(e.name) && inCurrentRoutines(e.name))
     .map(e => ({ e, s: exStats(e) })).filter(x => x.s).map(x => ({ ...x, dec: decisionAfter(x.e, x.s) }));
   const stalls = ex.filter(x => x.s.unclean >= CFG.stallSessions).sort((a, b) => b.s.unclean - a.s.unclean);
   // Przyczyna przeanalizowana: zastój sprzed wpisu w decyzje.md, po decyzji jeszcze bez nowego zastoju.
@@ -2546,7 +2568,8 @@ function renderPlateaus() {
     <p><b>Zaległe podniesienie</b> = co najmniej ${CFG.overdueSessions} czyste treningi z rzędu na tym samym ciężarze i ostatnia seria najnowszego treningu z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)} (czysto, ale bez zapasu nie jest zaległe). <b>Do obserwacji</b> = ${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego wyniku.</p>
     <p><b>Przyczyna przeanalizowana</b>: po początku zastoju jest wpis w decyzje.md dla tego ćwiczenia (ciezar, kolejnosc, zasada albo maszyna).
       Treningi sprzed decyzji nie liczą się już do zastoju; licznik startuje od dnia decyzji. Jeśli po decyzji znów ${CFG.stallSessions} pełne treningi
-      nie wyjdą czysto, to nowy zastój. Ta sama reguła działa we wskaźniku „Stan planu” i w sygnałach.</p>`;
+      nie wyjdą czysto, to nowy zastój. Ta sama reguła działa we wskaźniku „Stan planu” i w sygnałach.</p>
+    <p>Ćwiczenia spoza rutyn obecnego cyklu (np. leg extension od cyklu 2) nie trafiają do zastojów, zaległych podniesień ani „do obserwacji”; ich historia zostaje na wykresach i w rekordach.</p>`;
 }
 
 // ---------- Stan planu (nagłówek) ----------
@@ -2561,7 +2584,8 @@ function planState() {
   const from = addDays(midnight(latest), -CFG.planWindowDays), weeksN = CFG.planWindowDays / 7;
   if (ws[0].start >= from) return { level: "none" };
   const decisionsFor = e => DECISIONS.filter(d => d.ex === e.name || d.ex === sourceOf(e.name));
-  const active = MODEL.exercises.filter(e => e.kind === "weight" && !isClosed(e.name) &&
+  // Bez ćwiczeń spoza rutyn obecnego cyklu (np. leg extension od cyklu 2).
+  const active = MODEL.exercises.filter(e => e.kind === "weight" && !isClosed(e.name) && inCurrentRoutines(e.name) &&
       dayDiff(new Date(Math.max(...e.sets.map(s => +s.workout.start))), latest) <= CFG.signalsActiveDays)
     .map(e => ({ e, s: exStats(e) })).filter(x => x.s);
   // Zastój jak w sekcji „Zastoje” (exStats: licznik od decyzji z decyzje.md po początku zastoju).
@@ -2597,7 +2621,7 @@ function renderPlanState() {
       <li><b>🟠 Najpierw regularność:</b> zamiast 🟡 / 🔴, gdy w oknie jest mniej niż ${CFG.planMinSessions} treningów (CFG.planMinSessions; cel regularności: ${CFG.maxPerWeek} treningi w tygodniu pn–nd).</li>
     </ul>
     <p>Główne ćwiczenia: złożone (kategorie zlozone_maszyna i zlozone_wolne). Zastój jak w sekcji „Zastoje”: wpis w decyzje.md dla ćwiczenia (ciezar, kolejnosc, zasada, maszyna) po początku zastoju przerywa licznik, a nowy zastój liczy się od decyzji.
-      Wzrost: ciężar roboczy z ostatniego pełnego treningu wobec ostatniego pełnego treningu sprzed okna, dla aktywnych maszyn; bez ćwiczeń nowych, z wpisem ciezar od początku okna i z masą ciała.</p>`;
+      Wzrost: ciężar roboczy z ostatniego pełnego treningu wobec ostatniego pełnego treningu sprzed okna, dla aktywnych maszyn; bez ćwiczeń nowych, z wpisem ciezar od początku okna, z masą ciała i spoza rutyn obecnego cyklu.</p>`;
 }
 
 // ---------- Progres wg rodzin ruchu ----------
@@ -2645,9 +2669,11 @@ const MARK_TYPES = new Set(["ciezar", "kolejnosc", "zasada", "kategoria", "maszy
 const MARK_TYPES_ALL = new Set(["kategoria", "wyjatek"]);                                 // wpisy dla całego planu (*)
 
 // Znaczniki decyzji: wpisy dla ćwiczeń z tej rodziny ruchu oraz wpisy dla całego planu (*) typu kategoria / wyjatek
-// i start planu (najwcześniejszy wpis „zasada” dla * z rutynami FBW_A / B / C, PLAN_CHANGES[0]; późniejsze wpisy tego rodzaju nie są znacznikami).
+// i start planu (najwcześniejszy wpis „zasada” dla * z rutynami FBW_A / B / C, PLAN_CHANGES[0]) oraz start każdego kolejnego cyklu (wpis tego rodzaju
+// z datą z CFG.cycleFrom); pozostałe wpisy tego rodzaju nie są znacznikami.
 // Wyjątek od limitu treningów w tygodniu nie dotyczy progresji, więc nie jest znacznikiem.
-const markersFor = fam => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) && !isLimitException(d) || d === PLAN_CHANGES[0] : MARK_TYPES.has(d.type) && familyOf(d.ex) === fam).map(d => ({ d: d.date,
+const isCycleStart = d => d === PLAN_CHANGES[0] || PLAN_CHANGES.includes(d) && CFG.cycleFrom.some(s => +isoDay(s) === +d.date);
+const markersFor = fam => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) && !isLimitException(d) || isCycleStart(d) : MARK_TYPES.has(d.type) && familyOf(d.ex) === fam).map(d => ({ d: d.date,
   html: `<div class="t">${esc(fmtDateLong(d.date))}</div><div class="muted" style="margin-bottom:4px">decyzje.md · ${esc(d.ex === "*" ? "cały plan" : d.ex)}</div>` +
     `<div><b>${esc(d.type)}</b>: ${esc(d.change)}</div><div class="n">${esc(d.why)}</div>` }));
 
@@ -2797,13 +2823,6 @@ function renderMuscles() {
   else if (h > 0 && q / h > CFG.quadHamMaxRatio) warn.push(`Czworogłowe dostają ${nf(q / h, 1)}× więcej serii niż dwugłowe uda. Dodaj uginanie nóg lub martwy ciąg rumuński.`);
   const missing = ["Klatka", "Plecy", "Barki", "Barki boczne", "Tył barków", "Biceps", "Triceps", "Czworogłowe uda", "Dwugłowe uda", "Brzuch"].filter(g => !groups.has(g));
   if (missing.length) info.push(`Bez bezpośrednich serii: ${missing.join(", ")}.`);
-  // Barki boczne i tył barków: niższa bezpośrednia objętość zgodna z planem (praca pośrednia z wyciskania nad głowę i wiosłowania).
-  const LOW_BY_PLAN = new Set(["Inne", "Barki boczne", "Tył barków"]);
-  const below = rows.filter(g => avg(g) < CFG.weeklySetsBase && !LOW_BY_PLAN.has(g));
-  const emptyWeeks = wk.filter(w => !w.items.length);
-  const emptyNote = emptyWeeks.length ? ` Średnia liczy też ${emptyWeeks.length === 1 ? "pusty tydzień" : "puste tygodnie"} ${emptyWeeks.map(w =>
-    w.start.getMonth() === w.end.getMonth() ? `${w.start.getDate()}–${fmtDate(w.end)}` : `${fmtDate(w.start)} – ${fmtDate(w.end)}`).join(", ")}.` : "";
-  if (below.length) info.push(`Poniżej obecnego poziomu ${CFG.weeklySetsBase} serii/tydz.: ${below.map(g => `${g} (${nf(avg(g), 1)})`).join(", ")}.${emptyNote}`);
   const empty = MODEL.workouts.flatMap(w => w.sets).filter(s => s.type !== "warmup" && s.rpe != null && s.rpe <= CFG.emptySetMaxRpe).length;
   if (empty) info.push(`${empty} ${plSerie(empty)} z RPE ≤ ${nf(CFG.emptySetMaxRpe, 1)} nie liczę (pusta objętość wg założeń).`);
   if (!warn.length) info.unshift("Proporcje między głównymi grupami wyglądają na zrównoważone.");
@@ -2811,23 +2830,24 @@ function renderMuscles() {
     warn.map(t => `<div class="warn"><span class="ic">⚠</span><span>${esc(t)}</span></div>`).join("") +
     info.map(t => `<div class="info"><span class="ic">ℹ</span><span>${esc(t)}</span></div>`).join("");
 
-  const [p2lo, p2hi] = CFG.weeklySetsTarget;
-  const scale = Math.max(p2hi, ...rows.map(avg));
-  const pct = v => (v / scale) * 100;
-  $("#muscle-avg").innerHTML = rows.map(g => `<div class="hbar" title="${esc(g)}: ${esc(nf(avg(g), 1))} serii/tydz.">
-      <span>${esc(g)}</span>
-      <span class="hb-track"><span class="hb-band" style="left:${pct(p2lo)}%;width:${pct(p2hi - p2lo)}%"></span><span class="hb-base" style="left:${pct(CFG.weeklySetsBase)}%"></span><span class="hb-fill" style="width:${pct(avg(g))}%"></span></span>
-      <span class="hb-val">${esc(nf(avg(g), 1))}</span></div>`).join("") +
-    `<div class="hb-legend"><span><i style="width:0;height:12px;border-left:1.5px dashed var(--text-muted)"></i>${CFG.weeklySetsBase} = obecny poziom</span>
-      <span><i style="width:14px;height:10px;background:rgba(120,190,255,0.16);border-radius:2px"></i>${p2lo}–${p2hi} = zakres docelowy</span></div>`;
-
   const maxCell = Math.max(...rows.flatMap(g => groups.get(g)), 1);
-  $("#muscle-heat").innerHTML = `<thead><tr><th class="rl"></th>${wk.map(w => `<th>${esc(fmtDate(w.start))}</th>`).join("")}<th class="tot">Razem</th></tr></thead>
+  // Tydzień w toku (zawiera dzisiejszy dzień): gwiazdka w nagłówku, żeby niższe liczby nie wyglądały na spadek.
+  const today = midnight(new Date());
+  const cur = wk.findIndex(w => today >= w.start && today <= w.end);
+  const curTxt = cur < 0 ? "" : `tydzień w toku (do ${fmtDate(wk[cur].end)}), liczby jeszcze mogą wzrosnąć`;
+  $("#muscle-heat").innerHTML = `<thead><tr><th class="rl"></th>${wk.map((w, i) => i === cur
+      ? `<th title="${esc(curTxt)}">${esc(fmtDate(w.start))}*</th>` : `<th>${esc(fmtDate(w.start))}</th>`).join("")}<th class="tot">Razem</th></tr></thead>
     <tbody>${rows.map(g => `<tr><td class="rl">${esc(g)}</td>${groups.get(g).map((v, i) => {
       const k = rampIdx(v, maxCell);
       const style = k < 0 ? `background:var(--surface-2);color:var(--text-muted)` : `background:${RAMP[k]};color:${rampInk(k)}`;
-      return `<td class="hc" style="${style}" title="${esc(g)}, tydzień od ${esc(fmtDate(wk[i].start))}: ${v} serii">${v || "·"}</td>`;
+      return `<td class="hc" style="${style}" title="${esc(g)}, tydzień od ${esc(fmtDate(wk[i].start))}${i === cur ? " (w toku)" : ""}: ${v} serii">${v || "·"}</td>`;
     }).join("")}<td class="tot">${sum(groups.get(g), v => v)}</td></tr>`).join("")}</tbody>`;
+  const note = $("#muscle-note");
+  note.hidden = cur < 0;
+  note.textContent = cur < 0 ? "" : `* ${curTxt}.`;
+  // Otwarta na najnowszych tygodniach (prawa krawędź); pierwsza kolumna przypięta.
+  const heatWrap = $("#muscle-heat").parentElement;
+  heatWrap.scrollLeft = heatWrap.scrollWidth;
 
   const byGroup = new Map();
   for (const [ex, g] of mapping) { if (!byGroup.has(g)) byGroup.set(g, []); byGroup.get(g).push(ex); }
