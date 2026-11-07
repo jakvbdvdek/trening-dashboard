@@ -107,6 +107,8 @@ section.card { padding: 18px 18px 14px; margin-bottom: 16px; min-width: 0; }
 .row2 + * { margin-top: 16px; }
 .row2.even { grid-template-columns: 1fr 1fr; }
 .row2 + .card { margin-top: 16px; }
+.row2.tri { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .row2.tri { grid-template-columns: 1fr; } }
 @media (max-width: 860px) { .row2, .row2.even { grid-template-columns: 1fr; } }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text-secondary); font-size: 14px; align-items: center; }
@@ -487,7 +489,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
     <details><summary>Jak przypisałem ćwiczenia do grup</summary><div class="map-list" id="muscle-map"></div></details>
   </section>
 
-  <div class="row2 even" id="czas">
+  <div class="row2 even tri" id="czas">
     <section class="card">
       <div class="card-head">
         <div>
@@ -505,6 +507,15 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
         </div>
       </div>
       <div class="chart" id="density"></div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>Średnie RPE treningu</h2>
+          <p>RPE wpisywane zachowawczo – liczy się kierunek zmian, nie wartość</p>
+        </div>
+      </div>
+      <div class="chart" id="rpe-chart"></div>
     </section>
   </div>
 
@@ -1915,12 +1926,14 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
   hit.addEventListener("pointerleave", ev => { if (ev.pointerType === "mouse") { setActive(null); hideTip(); } });
 }
 
-function barChart(host, { labels, values, tips, height = 220, valueLabels = false, axis = true, refs = [], band = null, fmt = v => nf(v), axisFmt = fmt }) {
+// markers: [{ i, html }] — pionowa przerywana linia z rombem przed słupkiem i (jak w lineChart); treść wpisu dopisana do dymku słupka i.
+// yMax: stała górna granica osi (np. 10 dla RPE).
+function barChart(host, { labels, values, tips, height = 220, valueLabels = false, axis = true, refs = [], band = null, fmt = v => nf(v), axisFmt = fmt, markers = [], yMax = 0 }) {
   host.innerHTML = "";
   const W = host.clientWidth, H = height;
-  const m = { l: axis ? 48 : 8, r: 8, t: valueLabels ? 20 : 12, b: 26 };
+  const m = { l: axis ? 48 : 8, r: 8, t: valueLabels ? 20 : markers.length ? 18 : 12, b: 26 };
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" }, host);
-  const max = Math.max(...values, ...refs.map(r => r.v), band ? band[1] : 0, 1);
+  const max = Math.max(...values, ...refs.map(r => r.v), band ? band[1] : 0, yMax, 1);
   const ticks = axis ? niceTicks(0, max, 4) : [0, max];
   const top = ticks[ticks.length - 1];
   const Y = v => m.t + (1 - v / top) * (H - m.t - m.b);
@@ -1948,6 +1961,12 @@ function barChart(host, { labels, values, tips, height = 220, valueLabels = fals
     return bar;
   });
   svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: css("--axis"), "stroke-width": 1 }, svg);
+  const ink = css("--text-secondary");
+  for (const mk of markers) {
+    const x = m.l + bandW * mk.i;
+    svgEl("line", { x1: x, x2: x, y1: m.t - 4, y2: H - m.b, stroke: ink, "stroke-width": 1, "stroke-dasharray": "2 3", opacity: 0.8 }, svg);
+    svgEl("path", { d: `M${x},${m.t - 12}l4,4l-4,4l-4,-4Z`, fill: ink }, svg);
+  }
   for (const r of refs) {
     svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(r.v), y2: Y(r.v), stroke: css("--text-secondary"), "stroke-width": 1, "stroke-dasharray": "4 4" }, svg);
     svgEl("text", { x: W - m.r, y: Y(r.v) - 5, "text-anchor": "end", "font-size": 12, fill: css("--text-secondary") }, svg).textContent = r.label;
@@ -1956,7 +1975,7 @@ function barChart(host, { labels, values, tips, height = 220, valueLabels = fals
     const hit = svgEl("rect", { x: m.l + bandW * i, y: m.t, width: bandW, height: H - m.t - m.b, fill: "transparent" }, svg);
     const onPoint = ev => {
       bars.forEach((b, j) => b && b.setAttribute("opacity", j === i ? 1 : 0.45));
-      showTip(tips[i], ev);
+      showTip(tips[i] + markers.filter(k => k.i === i).map(k => `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--grid)">${k.html}</div>`).join(""), ev);
     };
     hit.addEventListener("pointermove", onPoint);
     hit.addEventListener("pointerdown", onPoint);   // stuknięcie na ekranie dotykowym
@@ -2933,6 +2952,38 @@ function renderTempo() {
   });
 }
 
+// ---------- Średnie RPE treningu ----------
+// Jeden słupek na trening: średnie RPE serii roboczych z wpisanym RPE (bez rozgrzewek, bez dni-wyjątków). Trening bez żadnego RPE pomijam.
+// Tylko opis: bez celu, progów i ocen. Znaczniki: start planu i start kolejnych cykli (decyzje.md).
+function rpeWorkouts() {
+  return MODEL.workouts.filter(w => !isExcluded(w.start)).map(w => {
+    const r = w.sets.filter(s => s.type !== "warmup" && s.rpe != null).map(s => s.rpe);
+    return r.length ? { w, n: r.length, rpe: mean(r) } : null;
+  }).filter(Boolean);
+}
+function renderRpe() {
+  const host = $("#rpe-chart"), items = rpeWorkouts();
+  if (!items.length) { host.textContent = "Brak treningów z wpisanym RPE."; return; }
+  const markers = DECISIONS.filter(isCycleStart).map(d => ({
+    d: d.date,
+    html: `<div class="t">${esc(fmtDateLong(d.date))}</div><div class="muted" style="margin-bottom:4px">decyzje.md · cały plan</div>` +
+      `<div><b>${esc(d.type)}</b>: ${esc(d.change)}</div><div class="n">${esc(d.why)}</div>`,
+  }));
+  barChart(host, {
+    labels: items.map(x => fmtDate(x.w.start)), values: items.map(x => +x.rpe.toFixed(2)),
+    fmt: v => nf(v, 1), axisFmt: v => nf(v, 1), height: 200, yMax: 10,
+    markers: markers.map(m => ({ i: items.findIndex(x => dayDiff(m.d, x.w.start) >= 0), html: m.html })).filter(m => m.i >= 0),
+    tips: items.map(({ w, n, rpe }) => {
+      const r = routineOf(w);
+      return `<div class="t">${esc(w.title)}</div>
+        <div class="muted" style="margin-bottom:4px">${esc(fmtDateLong(w.start))}, ${esc(fmtTime(w.start))}</div>
+        ${tipRow("Średnie RPE", nf(rpe, 1), css("--series-1"))}
+        ${tipRow("Rutyna", r ? "FBW_" + r : "—")}
+        ${tipRow("Serie z RPE", nf(n) + " z " + nf(w.workingSets))}`;
+    }),
+  });
+}
+
 // ---------- Kalendarz ----------
 const WD_SHORT = ["pn", "wt", "śr", "cz", "pt", "sb", "nd"];
 const WD_LONG = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"];
@@ -3129,7 +3180,7 @@ function renderRecords() {
   fill($("#records-rare"), rare);
 }
 
-function renderCharts() { renderProgress(); renderWeekly(); renderVolume(); renderTempo(); }
+function renderCharts() { renderProgress(); renderWeekly(); renderVolume(); renderTempo(); renderRpe(); }
 function render() { renderKPIs(); renderPlanState();renderSignals(); renderOrder(); renderPlateaus(); renderCharts(); renderMuscles(); renderCalendar(); renderRecords(); }
 
 function load(text) {
