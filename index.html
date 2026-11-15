@@ -482,7 +482,6 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
         <p>Serie robocze przypisane do głównej partii mięśniowej ćwiczenia (bez rozgrzewek i cardio)</p>
       </div>
     </div>
-    <div id="muscle-warn"></div>
     <div class="muscle-row">
       <div class="panel"><h4>Serie w poszczególnych tygodniach</h4><div class="table-wrap" tabindex="0" role="region" aria-label="Serie w poszczególnych tygodniach"><div class="heat-box" id="muscle-box"><table class="heat sticky-first" id="muscle-heat"></table></div></div><div class="note" id="muscle-note" hidden></div></div>
     </div>
@@ -1414,6 +1413,7 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-11-08 | * | zasada | Cykl 2: rutyny FBW_A, FBW_B, FBW_C w nowym zestawie (góra w priorytecie); leg press 2×, hip thrust i leg curl 1×, bez leg extension; brzuch 2× w tygodniu | Zestaw ćwiczeń cyklu 2 od 2026-11-08; listy rutyn w założeniach, sekcja 3 |
 | 2026-11-10 | * | zasada | Rozgrzewka także przed hip thrustem | Hip thrust w cyklu 2 (FBW_B); dozwolone dwie serie rozgrzewkowe; kontrola kolejności wymaga rozgrzewki od 2026-11-10 (CFG.hipThrustWarmupFrom) |
 | 2026-11-07 | * | zasada | Stan planu: wzrost = wyższy ciężar roboczy albo ten sam ciężar i większa suma powtórzeń; progi bez zmian | Decyzja Jakuba (DB-06): na tym samym ciężarze postęp widać w powtórzeniach; niższy ciężar nie jest wzrostem, nawet przy większej sumie (CFG.planRepsFrom) |
+| 2026-11-12 | * | zasada | Gotowe do podniesienia: 2 czyste treningi z rzędu i w obu ostatnia seria RPE ≤ 9; najwyżej 2 podniesienia na trening, po jednym z grupy pchanie / ciągnięcie / nogi | Decyzja Jakuba (DB-08); data w CFG.raiseBothFrom, grupy w CFG.raiseGroups, limit w CFG.maxRaisesPerSession |
 </script>
 <script>
 "use strict";
@@ -1447,9 +1447,19 @@ const CFG = {
   // w treningu wcześniej (kolejność z CSV); podniesienia w treningach pomiędzy dwoma treningami ćwiczenia bez zmian. Wcześniej kolejność bez znaczenia.
   relatedOrderFrom: "2026-10-27",
   overdueSessions: 3,      // „zaległe podniesienie”: tyle czystych treningów z rzędu na tym samym ciężarze
-  raiseMaxLastRpe: 9,      // gotowe do podniesienia: czysto ×2+ i ostatnia seria najnowszego treningu z RPE najwyżej tyle (wyżej: „czysto, ale bez zapasu”)
+  raiseMaxLastRpe: 9,      // gotowe do podniesienia: czysto ×2+ i ostatnia seria z RPE najwyżej tyle (najnowszy trening; od raiseBothFrom oba z 2 ostatnich; wyżej: „czysto, ale bez zapasu”)
   raiseRpeFrom: "2026-10-16",   // warunek raiseMaxLastRpe od tego dnia (zasada z decyzje.md); dla wcześniejszych treningów gotowość = same 2 czyste treningi z rzędu
-  maxRaisesPerSession: 3,  // zasada z decyzje.md (16.10): najwyżej tyle podniesień na trening; tylko w opisie, dashboard niczego nie planuje
+  // Od tego dnia (data najnowszego ocenianego treningu) warunek raiseMaxLastRpe w OBU z 2 ostatnich czystych treningów (decyzje.md 2026-11-12);
+  // wcześniej tylko w najnowszym. Dotyczy „Gotowe do podniesienia” i „Zaległe podniesienie”.
+  raiseBothFrom: "2026-11-12",
+  maxRaisesPerSession: 2,  // zasada z decyzje.md (12.11; wcześniej 3 od 16.10): najwyżej tyle podniesień na trening, po jednym z grupy (raiseGroups); tylko w opisie, dashboard niczego nie planuje
+  // Grupy podniesień (decyzje.md 2026-11-12): etykieta przy pozycji listy „Gotowe do podniesienia”; dashboard nie wybiera ćwiczeń.
+  // Nazwy z Hevy; maszyny wydzielone z notatki (np. „Chest Press (talerze)”) dostają grupę ćwiczenia źródłowego. Hip thrust = CFG.hipThrust.
+  raiseGroups: {
+    "pchanie": ["Seated Shoulder Press (Machine)", "Shoulder Press (Machine Plates)", "Chest Press (Machine)", "Chest Fly (Machine)", "Seated Triceps Press", "Lateral Raise (Dumbbell)"],
+    "ciągnięcie": ["Seated Row (Machine)", "Lat Pulldown (Machine)", "Rear Delt Reverse Fly (Machine)", "Preacher Curl (Machine)"],
+    "nogi": ["Leg Press (Machine)", "Hip Thrust (Machine)", "Seated Leg Curl (Machine)"],
+  },
   cleanMaxRpe: 9.5,        // czysta seria: bez upadku i RPE najwyżej tyle (czyli < 10)
   emptySetMaxRpe: 6,       // pusta objętość: seria z RPE najwyżej tyle nie liczy się do objętości
   signalsActiveDays: 21,   // sygnały tylko dla maszyn używanych w tylu ostatnich dniach (licząc od najnowszego treningu)
@@ -1474,7 +1484,7 @@ const CFG = {
   // Cykle planu (zalozenia sekcja 3): cykl 1 od początku rozpoznawania rutyn, kolejne od tych dat (cykl 2: decyzje.md 2026-11-08).
   // Rutyny każdego cyklu w PLAN (pole routines). Wpis „zasada” dla * z FBW_A / B / C z datą początku cyklu = znacznik na kartach progresu.
   cycleFrom: ["2026-11-08"],
-  hipThrust: "Hip Thrust (Machine)",   // nazwa w Hevy (niepotwierdzona; w FAMILIES rozpoznaję każde ćwiczenie z „Hip Thrust” w nazwie)
+  hipThrust: "Hip Thrust (Machine)",   // nazwa w Hevy (potwierdzona w CSV 10.11; w aplikacji po polsku „Hip thrust (maszyna)”); w FAMILIES każde ćwiczenie z „Hip Thrust” w nazwie
   hipThrustWarmupFrom: "2026-11-10",   // rozgrzewka wymagana także przed hip thrustem od tego dnia (decyzje.md 2026-11-10; dwie serie rozgrzewkowe dozwolone)
   // Aliasy (błędnie wybrane ćwiczenia) i okresy maszyn są w decyzje.md (typy „alias” i „maszyna”).
 };
@@ -1485,7 +1495,7 @@ const FAMILIES = [
   ["Leg press", /leg press/i, "zlozone_maszyna"],
   ["Prostowanie nóg", /leg extension/i, "izolacja"],
   ["Uginanie nóg", /leg curl/i, "izolacja"],
-  // Każda nazwa z „Hip Thrust” (nazwa w Hevy niepotwierdzona, główna w CFG.hipThrust); grupa mięśniowa: pośladki (MUSCLE_RULES).
+  // Każda nazwa z „Hip Thrust” (nazwa w Hevy w CFG.hipThrust); grupa mięśniowa: pośladki (MUSCLE_RULES).
   ["Hip thrust", /hip thrust/i, "izolacja"],
   // Maszyny wydzielone z notatki (np. „Chest Press (talerze)” / „(stos)”, decyzje.md) trafiają tu po nazwie.
   ["Wyciskanie na klatkę", /chest press|bench press/i, "zlozone_maszyna"],
@@ -1589,6 +1599,10 @@ const dm = d => `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
 // Czysto, ale bez zapasu: ostatnia seria treningu z RPE powyżej CFG.raiseMaxLastRpe, oceniane dla treningów od CFG.raiseRpeFrom.
 const RAISE_RPE_FROM = isoDay(CFG.raiseRpeFrom);
 const noReserve = x => x.p.date >= RAISE_RPE_FROM && x.lastRpe > CFG.raiseMaxLastRpe;
+// Treningi bez zapasu dla oceny gotowości (s = exStats): od CFG.raiseBothFrom (data ostatniego pełnego treningu) sprawdzam 2 ostatnie
+// czyste treningi z rzędu, wcześniej tylko najnowszy. Pusta lista = jest zapas.
+const RAISE_BOTH_FROM = isoDay(CFG.raiseBothFrom);
+const noReserveRuns = s => (s.lf.p.date >= RAISE_BOTH_FROM && s.streak >= 2 ? s.full.slice(-2) : [s.lf]).filter(noReserve);
 const BUILD_BEST_FROM = isoDay(CFG.buildBestFrom);
 const PLAN_REPS_FROM = isoDay(CFG.planRepsFrom);
 // Aliasy: wpis „alias”, Zmiana = „Liczyć jako <nazwa z Hevy>” (opcjonalnie „… do RRRR-MM-DD”, włącznie: data końca wpisu).
@@ -1656,6 +1670,8 @@ function noteContent(note, source) {
 }
 // Ćwiczenie źródłowe w Hevy dla maszyny wydzielonej z notatki (do wpisów decyzje.md).
 const sourceOf = name => (SPLITS.find(s => name.startsWith(baseName(s.ex) + " (")) || {}).ex || name;
+// Grupa podniesień (CFG.raiseGroups) po nazwie ćwiczenia albo jego ćwiczenia źródłowego; null = poza grupami.
+const raiseGroupOf = name => Object.keys(CFG.raiseGroups).find(g => CFG.raiseGroups[g].some(n => n === name || n === sourceOf(name))) || null;
 
 // ---------- Parsowanie ----------
 function parseCSV(text) {
@@ -2338,10 +2354,15 @@ function signalOf(e, s) {
   else if (!li.clean && li.minReps >= li.target) sig = { st: "hold", label: "● Na cel, bez zapasu",
     why: `Powtórzenia na cel, ale była seria do upadku albo z RPE powyżej ${nf(CFG.cleanMaxRpe, 1)}, więc trening nie liczy się jako czysty.` + almost };
   else if (!li.clean) sig = { st: "down", label: "▼ Poniżej celu", why: `Najsłabsza seria ${li.minReps} z ${li.target}.` + almost };
-  else if (li.lastReps >= li.target + CFG.overTargetReps) sig = { st: "up", ready: streak >= 2 && !noReserve(li), label: "▲ Cel przekroczony", why: `Ostatnia seria ${li.lastReps} przy celu ${li.target}` +
+  else if (li.lastReps >= li.target + CFG.overTargetReps) sig = { st: "up", ready: streak >= 2 && !noReserveRuns(s).length, label: "▲ Cel przekroczony", why: `Ostatnia seria ${li.lastReps} przy celu ${li.target}` +
     (streak >= 2 ? `; czysto ${streak} ${plTrening(streak)} z rzędu.` : ".") };
-  else if (streak >= 2 && noReserve(li)) sig = { st: "hold", label: `● Czysto ×${streak}, bez zapasu`,
-    why: `${streak} ${plTrening(streak)} z rzędu czysto na ${kg(s.kgNow)}, ale ostatnia seria z RPE ${nf(li.lastRpe, 1)} (powyżej ${nf(CFG.raiseMaxLastRpe, 1)}): czysto, ale bez zapasu.` };
+  else if (streak >= 2 && noReserveRuns(s).length) {
+    // Od CFG.raiseBothFrom brak zapasu może być w przedostatnim treningu: wtedy RPE z datą treningu.
+    const bad = noReserveRuns(s);
+    const rpeTxt = bad.length === 1 && bad[0] === li ? nf(li.lastRpe, 1) : bad.map(x => `${nf(x.lastRpe, 1)} (${fmtDate(x.p.date)})`).join(" i ");
+    sig = { st: "hold", label: `● Czysto ×${streak}, bez zapasu`,
+      why: `${streak} ${plTrening(streak)} z rzędu czysto na ${kg(s.kgNow)}, ale ostatnia seria z RPE ${rpeTxt} (powyżej ${nf(CFG.raiseMaxLastRpe, 1)}): czysto, ale bez zapasu.` };
+  }
   else if (streak >= 2) sig = { st: "up", ready: true, label: `▲ Czysto ×${streak}`, why: `${streak} ${plTrening(streak)} z rzędu czysto na ${kg(s.kgNow)}.` };
   else sig = { st: "hold", label: "● Czysto ×1", why: `Pierwszy czysty trening na ${kg(s.kgNow)}.` };
   // info: ostatni trening bez wzrostu sumy po podniesieniu ćwiczenia powiązanego (ℹ pod plakietką).
@@ -2539,18 +2560,19 @@ function renderSignals() {
   // serii roboczych ostatniego treningu (bez RPE na końcu). To informacja, nie plan.
   // Nad listą limit z decyzje.md (CFG.maxRaisesPerSession); dashboard niczego nie wybiera.
   ready.sort((a, b) => (a.rpe ?? Infinity) - (b.rpe ?? Infinity));
-  const maxN = CFG.maxRaisesPerSession;
+  const maxN = CFG.maxRaisesPerSession, groupNames = Object.keys(CFG.raiseGroups);
   $("#signals-ready").innerHTML = ready.length ? `<div class="info ready" style="margin-bottom:12px"><span class="ic ok">▲</span><div><b>Gotowe do podniesienia</b> (od największego zapasu)` +
-    `<p class="ready-note">Najwyżej ${maxN} ${plPodniesienie(maxN)} na trening, wybór należy do Ciebie.</p><ul>` +
-    ready.map(({ e, s, rpe }) => `<li>${esc(`${short(e.name)} (czysto ×${s.streak}, ${rpe != null ? `śr. RPE ${nf(rpe, 1)}` : "bez RPE"})`)}</li>`).join("") + `</ul></div></div>` : "";
+    `<p class="ready-note">Najwyżej ${maxN} ${plPodniesienie(maxN)} na trening, po jednym z grupy: ${esc(groupNames.join(", "))}.</p><ul>` +
+    ready.map(({ e, s, rpe }) => { const g = raiseGroupOf(e.name);
+      return `<li>${esc(`${short(e.name)} (czysto ×${s.streak}, ${rpe != null ? `śr. RPE ${nf(rpe, 1)}` : "bez RPE"})`)}<span class="tag">${esc(g || "bez grupy")}</span></li>`; }).join("") + `</ul></div></div>` : "";
   $("#signals-rules").textContent =`Każdy trening oceniany względem celu obowiązującego w jego dniu. ` +
     `Czysto = co najmniej ${CFG.sets} serie robocze na jednym ciężarze, wszystkie na cel, bez upadku i z RPE najwyżej ${nf(CFG.cleanMaxRpe, 1)}. ` +
     `Podbijanie w trakcie (mniej niż ${CFG.sets} serie na najwyższym ciężarze) to trening przejściowy: nie liczy się do „czysto ×N” ani do zastoju na żadnym ciężarze i nie przerywa serii; ocena nowego ciężaru zaczyna się od kolejnego pełnego treningu. ` +
     `Zejście w trakcie (start na najwyższym ciężarze, potem lżej) to trening nieczysty na ciężarze startowym. ` +
     `Jedna cięższa seria po pełnych seriach to seria testowa. ` +
     `Cel przekroczony = ostatnia seria o ${CFG.overTargetReps} lub więcej powt. ponad cel. ` +
-    `Gotowe do podniesienia = czysto co najmniej ×2 i ostatnia seria najnowszego treningu z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)}; przy wyższym RPE sygnał to „czysto, ale bez zapasu”. ` +
-    `Wg zasady z decyzje.md najwyżej ${maxN} ${plPodniesienie(maxN)} na trening; lista nad tabelą jest od największego zapasu, czyli od najniższego średniego RPE wszystkich serii roboczych (bez rozgrzewkowych) ostatniego ocenianego treningu, i jest tylko informacją: wybór należy do Ciebie. ` +
+    `Gotowe do podniesienia = czysto co najmniej ×2 i od ${fmtDate(RAISE_BOTH_FROM)} (CFG.raiseBothFrom) ostatnia seria z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)} w obu z 2 ostatnich czystych treningów, wcześniej tylko w najnowszym; przy wyższym RPE sygnał to „czysto, ale bez zapasu”. ` +
+    `Wg zasady z decyzje.md najwyżej ${maxN} ${plPodniesienie(maxN)} na trening, po jednym z grupy (${groupNames.join(", ")}; CFG.raiseGroups, etykieta przy każdej pozycji); lista nad tabelą jest od największego zapasu, czyli od najniższego średniego RPE wszystkich serii roboczych (bez rozgrzewkowych) ostatniego ocenianego treningu, i jest tylko informacją: wybór należy do Ciebie. ` +
     `Zastój = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego wyniku. ` +
     `Budowanie powtórzeń: po podniesieniu (ciężar roboczy wyższy niż w poprzednim pełnym treningu tej maszyny, rozpoznawany z danych, notatka nie jest potrzebna) ` +
     `pierwszy trening na nowym ciężarze poniżej celu i każdy kolejny poniżej celu z większą sumą powtórzeń niż najlepsza dotąd suma na tym ciężarze ` +
@@ -2634,7 +2656,7 @@ function renderPlateaus() {
   const stalls = ex.filter(x => x.s.unclean >= CFG.stallSessions).sort((a, b) => b.s.unclean - a.s.unclean);
   // Przyczyna przeanalizowana: zastój sprzed wpisu w decyzje.md, po decyzji jeszcze bez nowego zastoju.
   const analyzed = ex.filter(x => x.s.analyzed && x.s.unclean < CFG.stallSessions);
-  const overdue = ex.filter(x => x.s.streak >= CFG.overdueSessions && !x.dec && !noReserve(x.s.lf));
+  const overdue = ex.filter(x => x.s.streak >= CFG.overdueSessions && !x.dec && !noReserveRuns(x.s).length);
   const watch = ex.filter(x => x.s.unclean === CFG.stallSessions - 1 && !x.dec).map(x => x.e.name);
 
   // Powtórzenia w tabeli zastoju; trening bez zmiany licznika (podniesione ćwiczenie powiązane) z dopiskiem ℹ.
@@ -2701,7 +2723,7 @@ function renderPlateaus() {
       (25, 25, 27, 27, 27 = zastój dopiero po trzecim 27). Wzrost = suma większa niż najlepsza dotąd na tym ciężarze (24, 22, 23 = zastój po 23, CFG.buildBestFrom).
       Trening bez wzrostu sumy po podniesieniu ciężaru w ćwiczeniu powiązanym (np. biceps po wiosłowaniu, CFG.relatedLifts) nie zwiększa licznika i go nie zeruje (ℹ w tabeli);
       podniesienie w tym samym treningu liczy się tylko, gdy ćwiczenie powiązane było w nim wcześniej (kolejność z CSV).</p>
-    <p><b>Zaległe podniesienie</b> = co najmniej ${CFG.overdueSessions} czyste treningi z rzędu na tym samym ciężarze i ostatnia seria najnowszego treningu z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)} (czysto, ale bez zapasu nie jest zaległe). <b>Do obserwacji</b> = ${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego wyniku.</p>
+    <p><b>Zaległe podniesienie</b> = co najmniej ${CFG.overdueSessions} czyste treningi z rzędu na tym samym ciężarze i ostatnia seria z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)}: od ${esc(fmtDate(RAISE_BOTH_FROM))} w obu z 2 ostatnich treningów, wcześniej tylko w najnowszym (czysto, ale bez zapasu nie jest zaległe). <b>Do obserwacji</b> = ${CFG.stallSessions - 1} ${plTrening(CFG.stallSessions - 1)} z rzędu bez czystego wyniku.</p>
     <p><b>Przyczyna przeanalizowana</b>: po początku zastoju jest wpis w decyzje.md dla tego ćwiczenia (ciezar, kolejnosc, zasada albo maszyna).
       Treningi sprzed decyzji nie liczą się już do zastoju; licznik startuje od dnia decyzji. Jeśli po decyzji znów ${CFG.stallSessions} pełne treningi
       nie wyjdą czysto, to nowy zastój. Ta sama reguła działa we wskaźniku „Stan planu” i w sygnałach.</p>
@@ -2962,14 +2984,9 @@ function renderMuscles() {
   const avg = g => groups.has(g) ? sum(groups.get(g), v => v) / wk.length : 0;
   const rows = [...groups.keys()].sort((a, b) => avg(b) - avg(a));
 
-  // Informacje (bez oceny balansu między grupami: balans ocenia czat treningowy przy układaniu planu, T29).
-  const info = [];
-  const missing = ["Klatka", "Plecy", "Barki", "Barki boczne", "Tył barków", "Biceps", "Triceps", "Czworogłowe uda", "Dwugłowe uda", "Brzuch"].filter(g => !groups.has(g));
-  if (missing.length) info.push(`Bez bezpośrednich serii: ${missing.join(", ")}.`);
+  // Bez ocen składu planu (balans grup, brak bezpośrednich serii): ocenia je czat treningowy przy układaniu planu (T29, DB-08).
   const empty = MODEL.workouts.flatMap(w => w.sets).filter(s => s.type !== "warmup" && s.rpe != null && s.rpe <= CFG.emptySetMaxRpe).length;
   // Informacja o pustych seriach: przypis pod tabelą (obok tygodnia w toku), nie osobna ramka.
-  $("#muscle-warn").innerHTML =
-    info.map(t => `<div class="info"><span class="ic">ℹ</span><span>${esc(t)}</span></div>`).join("");
 
   const maxCell = Math.max(...rows.flatMap(g => groups.get(g)), 1);
   // Tydzień w toku (zawiera dzisiejszy dzień): gwiazdka w nagłówku, żeby niższe liczby nie wyglądały na spadek.
