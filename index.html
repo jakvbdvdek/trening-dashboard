@@ -1355,7 +1355,7 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 - **Typ**: jedna z wartości `ciezar`, `kolejnosc`, `kategoria`, `maszyna`, `alias`, `wyjatek`, `zasada`.
 - **Zmiana**: dla niektórych typów dashboard czyta treść, więc trzeba trzymać się wzorca:
   - `alias`: „Liczyć jako <nazwa z Hevy>”, obowiązuje od daty wpisu. Gdy alias dotyczy tylko okresu, na końcu dopisujemy datę końcową (włącznie): „Liczyć jako <nazwa z Hevy> do RRRR-MM-DD”. Wpisy spoza zakresu są osobną maszyną.
-  - `maszyna`: „Wpisy przed RRRR-MM-DD to inna maszyna (opis)” (zamknięty okres starej maszyny) albo „Okres niepewny do RRRR-MM-DD …” (od daty wpisu do podanej daty włącznie nie wiadomo, która maszyna) albo „… maszyna rozpoznawana po słowie "A" albo "B" w notatce ćwiczenia …” (od daty wpisu jedno ćwiczenie w Hevy dzieli się na maszyny według słowa w notatce ćwiczenia; brak słowa = pierwsza wymieniona maszyna, a dashboard ostrzega, gdy ciężar roboczy takiego treningu odbiega o ponad 15% od mediany 3 poprzednich treningów tej maszyny; oba słowa = trening niepewny, pokazywany jako osobny punkt bez połączenia z innymi).
+  - `maszyna`: „Wpisy przed RRRR-MM-DD to inna maszyna (opis)” (zamknięty okres starej maszyny) albo „Okres niepewny do RRRR-MM-DD …” (od daty wpisu do podanej daty włącznie nie wiadomo, która maszyna) albo „… maszyna rozpoznawana po słowie "A" albo "B" w notatce ćwiczenia …” (od daty wpisu jedno ćwiczenie w Hevy dzieli się na maszyny według słowa w notatce ćwiczenia; brak słowa = pierwsza wymieniona maszyna, a dashboard ostrzega, gdy ciężar roboczy takiego treningu odbiega o ponad 15% od mediany 3 poprzednich treningów tej maszyny; oba słowa = trening niepewny, pokazywany jako osobny punkt bez połączenia z innymi) albo „… wpisy przed DD.MM (albo RRRR-MM-DD; rok z Daty) to inny wariant (opis)” (stary wariant tego samego ćwiczenia, np. inne ustawienie albo chwyt: osobna seria na wykresie progresu i osobny wiersz w rekordach, bez sygnałów, zastojów, „Gotowe” i „Stanu planu”; nowy wariant zaczyna od nowa, przejście nie jest podniesieniem ani regresem; powiązania i kolejność liczą stary wariant jako to ćwiczenie).
   - `kategoria` z Ćwiczenie = `*`: nowe cele, np. „zlozone_maszyna 3 × 10, izolacja 3 × 12”.
   - `kategoria` dla pojedynczego ćwiczenia: zaczyna się od nazwy kategorii (`zlozone_maszyna`, `izolacja`, `brzuch`, `zlozone_wolne`). Dopisujemy go **tylko wtedy, gdy ćwiczenie zmienia kategorię**; od podanej daty nadpisuje przypisanie z `FAMILIES` w dashboardzie.
   - `ciezar` zaczynający się od „<N> kg” ze słowem „budowanie”, np. „6 kg, budowanie do 3 × 12”: od daty wpisu pierwszy ciąg pełnych treningów na N kg to nowy ciężar, więc treningi poniżej celu są oceniane jako budowanie powtórzeń, także gdy z danych nie widać podniesienia (np. pierwszy trening ćwiczenia ze zmianą ciężaru w trakcie).
@@ -1414,6 +1414,8 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-11-10 | * | zasada | Rozgrzewka także przed hip thrustem | Hip thrust w cyklu 2 (FBW_B); dozwolone dwie serie rozgrzewkowe; kontrola kolejności wymaga rozgrzewki od 2026-11-10 (CFG.hipThrustWarmupFrom) |
 | 2026-11-07 | * | zasada | Stan planu: wzrost = wyższy ciężar roboczy albo ten sam ciężar i większa suma powtórzeń; progi bez zmian | Decyzja Jakuba (DB-06): na tym samym ciężarze postęp widać w powtórzeniach; niższy ciężar nie jest wzrostem, nawet przy większej sumie (CFG.planRepsFrom) |
 | 2026-11-12 | * | zasada | Gotowe do podniesienia: 2 czyste treningi z rzędu i w obu ostatnia seria RPE ≤ 9; najwyżej 2 podniesienia na trening, po jednym z grupy pchanie / ciągnięcie / nogi | Decyzja Jakuba (DB-08); data w CFG.raiseBothFrom, grupy w CFG.raiseGroups, limit w CFG.maxRaisesPerSession |
+| 2026-11-12 | Shoulder Press (Machine Plates) | maszyna | Od 12.11 ustawienie przodem do oparcia; wpisy przed 12.11 to inny wariant (klasyczne ustawienie) | Decyzja Jakuba 15.11: ustawienie przodem do oparcia zostaje na stałe; 25 kg to nowy punkt odniesienia, nie podniesienie |
+| 2026-11-12 | * | zasada | Korekta wpisu z 2026-11-12 (gotowość do podniesienia i limit podniesień): poprawny powód to „Decyzja Jakuba 12.11 po analizie logów z 10.11: podniesienia wchodzą coraz ciężej”; treść zasady bez zmian | Poprawka powodu (DB-09); dane w CFG.raiseBothFrom, CFG.raiseGroups i CFG.maxRaisesPerSession bez zmian |
 </script>
 <script>
 "use strict";
@@ -1486,6 +1488,12 @@ const CFG = {
   cycleFrom: ["2026-11-08"],
   hipThrust: "Hip Thrust (Machine)",   // nazwa w Hevy (potwierdzona w CSV 10.11; w aplikacji po polsku „Hip thrust (maszyna)”); w FAMILIES każde ćwiczenie z „Hip Thrust” w nazwie
   hipThrustWarmupFrom: "2026-11-10",   // rozgrzewka wymagana także przed hip thrustem od tego dnia (decyzje.md 2026-11-10; dwie serie rozgrzewkowe dozwolone)
+  // Przypięte notatki z Hevy (nazwa w Hevy → teksty): notatka zawierająca tylko taki tekst (bez wielkości liter, interpunkcji i spacji)
+  // nie daje oznaczenia „trening z notatką”, tak jak same słowa maszyny („talerze” / „stos”) przy chest pressie. Tylko widok.
+  pinnedNotes: {
+    "Shoulder Press (Machine Plates)": ["Przodem do oparcia"],
+    "Lat Pulldown (Machine)": ["Nachwyt"],
+  },
   // Aliasy (błędnie wybrane ćwiczenia) i okresy maszyn są w decyzje.md (typy „alias” i „maszyna”).
 };
 // Rodziny ruchu: zamienniki robiące te same partie (gdy maszyna zajęta) trafiają do jednej grupy.
@@ -1625,12 +1633,21 @@ const hasWord = (text, w) => new RegExp(`(^|[^\\p{L}])${w}([^\\p{L}]|$)`, "iu").
 //  - „Wpisy przed RRRR-MM-DD to inna maszyna (opis)” → zamknięty okres starej maszyny,
 //  - „Okres niepewny do RRRR-MM-DD …” → od daty wpisu do podanej daty włącznie nie wiadomo, która maszyna;
 //    możliwe maszyny biorę z późniejszego podziału według notatki (SPLITS) dla tego ćwiczenia.
+//  - „… wpisy przed DD.MM (albo RRRR-MM-DD) to inny wariant (opis)” → stary wariant tego samego ćwiczenia (np. inne ustawienie, inny chwyt):
+//    osobna seria „<ćwiczenie> – <opis> (do DD.MM)”, jak zamknięty okres bez sygnałów, zastojów, „gotowe” i „Stanu planu”, ale z linią
+//    na karcie progresu (variant: true); powiązania (CFG.relatedLifts) i kontrola kolejności liczą go jako to ćwiczenie (sourceOf).
 const PERIODS = [];
 for (const d of DECISIONS.filter(d => d.type === "maszyna")) {
   const base = baseName(d.ex);
+  const variant = d.change.match(/przed\s+(\d{4}-\d{2}-\d{2}|\d{1,2}\.\d{1,2})(?![\d.]).*?inny\s+wariant/i);
   const before = d.change.match(/przed\s+(\d{4}-\d{2}-\d{2})/i);
   const unsure = d.change.match(/niepewny\s+do\s+(\d{4}-\d{2}-\d{2})/i);
-  if (unsure) {
+  if (variant) {
+    const dd = variant[1].match(/^(\d{1,2})\.(\d{1,2})$/);
+    const to = dd ? new Date(d.date.getFullYear(), +dd[2] - 1, +dd[1]) : isoDay(variant[1]);
+    const what = ([...d.change.matchAll(/\(([^()]+)\)/g)].pop() || [])[1] || "poprzedni wariant";
+    PERIODS.push({ ex: d.ex, from: new Date(0), to, uncertain: false, variant: true, name: `${d.ex} – ${what} (do ${dm(shiftDay(to, -1))})` });
+  } else if (unsure) {
     const to = shiftDay(isoDay(unsure[1]), 1);
     const next = SPLITS.find(s => s.ex === d.ex && s.from >= to);
     PERIODS.push({ ex: d.ex, from: d.date, to, uncertain: true, name: uncertainName(d.ex, next ? next.words : []) });
@@ -1651,6 +1668,16 @@ for (const d of DECISIONS.filter(d => d.type === "maszyna")) {
 const periodOf = (name, date) => PERIODS.find(p => p.ex === name && date >= p.from && date < p.to);
 // Maszyna, której okres zamknął wpis „maszyna” (np. multi press do 28.09): tylko historia (rekordy).
 const isClosed = name => PERIODS.some(p => !p.uncertain && !p.assigned && p.name === name);
+// Stary wariant ćwiczenia (wpis „maszyna … inny wariant”): okres wariantu albo undefined.
+const variantPeriod = name => PERIODS.find(p => p.variant && p.name === name);
+// Aktualne ćwiczenie dla starego wariantu i zamkniętego okresu maszyny (np. multi press do 28.09 → Chest Press (talerze), pierwsza maszyna
+// podziału według notatki); pozostałe nazwy bez zmian. Tylko KPI „różnych ćwiczeń”: stary wariant liczony razem z aktualnym.
+const currentName = name => {
+  const p = PERIODS.find(p => !p.uncertain && !p.assigned && p.name === name);
+  if (!p) return name;
+  const s = SPLITS.find(x => x.ex === p.ex && x.from >= p.to);
+  return s ? `${baseName(p.ex)} (${s.words[0]})` : p.ex;
+};
 // Nazwa maszyny dla wpisu z podziałem według notatki; null = ćwiczenie bez podziału w tym dniu.
 function splitOf(name, date, note) {
   const s = SPLITS.filter(x => x.ex === name && date >= x.from && (!x.end || date < x.end)).pop();
@@ -1662,14 +1689,18 @@ function splitOf(name, date, note) {
 // Nazwy serii niepewnych (okresy niepewne i treningi z oboma słowami w notatce): bez sygnałów i zastojów.
 const UNCERTAIN = new Set([...PERIODS.filter(p => p.uncertain).map(p => p.name), ...SPLITS.map(s => uncertainName(s.ex, s.words))]);
 // Notatka bez słów maszyny: jeśli po ich usunięciu (i interpunkcji) nic nie zostaje, to nie jest „trening z notatką”.
-function noteContent(note, source) {
+// Tak samo notatka z samym tekstem przypiętej notatki ćwiczenia `name` (CFG.pinnedNotes, także dla starego wariantu przez sourceOf).
+const bareText = t => t.replace(/[\p{P}\p{S}\s]/gu, "").toLowerCase();
+function noteContent(note, source, name) {
+  const pinned = name ? [...(CFG.pinnedNotes[name] || []), ...(CFG.pinnedNotes[sourceOf(name)] || [])] : [];
+  if (note && pinned.some(p => bareText(p) === bareText(note))) return "";
   const s = source && SPLITS.find(x => x.ex === source);
   if (!s || !note) return note;
   const rest = s.words.reduce((t, w) => t.replace(new RegExp(`(^|[^\\p{L}])${w}(?=[^\\p{L}]|$)`, "giu"), "$1"), note);
   return rest.replace(/[\p{P}\p{S}\s]/gu, "") ? note : "";
 }
-// Ćwiczenie źródłowe w Hevy dla maszyny wydzielonej z notatki (do wpisów decyzje.md).
-const sourceOf = name => (SPLITS.find(s => name.startsWith(baseName(s.ex) + " (")) || {}).ex || name;
+// Ćwiczenie źródłowe w Hevy dla maszyny wydzielonej z notatki i dla starego wariantu (do wpisów decyzje.md, powiązań i kolejności).
+const sourceOf = name => (SPLITS.find(s => name.startsWith(baseName(s.ex) + " (")) || variantPeriod(name) || {}).ex || name;
 // Grupa podniesień (CFG.raiseGroups) po nazwie ćwiczenia albo jego ćwiczenia źródłowego; null = poza grupami.
 const raiseGroupOf = name => Object.keys(CFG.raiseGroups).find(g => CFG.raiseGroups[g].some(n => n === name || n === sourceOf(name))) || null;
 
@@ -1806,7 +1837,7 @@ function analyzeExercise(e) {
         e1rm: e1rm(bestSet), volume: sum(sets, s => s.kg * s.reps), sets: sets.length,
         rpe: mean(sets.filter(s => s.rpe != null).map(s => s.rpe)),
         // Trening z oboma słowami maszyny nie dostaje kółka „z notatką”: pełna notatka jest w ostrzeżeniu nad sygnałami.
-        note: sets.some(s => s.solo) ? "" : noteContent((e.sets.find(s => s.workout === w && s.note) || {}).note || "", e.sets.find(s => s.workout === w).source),
+        note: sets.some(s => s.solo) ? "" : noteContent((e.sets.find(s => s.workout === w && s.note) || {}).note || "", e.sets.find(s => s.workout === w).source, e.name),
         solo: sets.some(s => s.solo),   // osobny punkt niepewny, nie łączony linią
       };
     });
@@ -1822,7 +1853,7 @@ function analyzeExercise(e) {
     e.repsProgress = [...byW.entries()].map(([w, sets]) => ({
       workout: w, date: w.start, reps: sets.map(s => s.reps), sum: sum(sets, s => s.reps),
       rpe: mean(sets.filter(s => s.rpe != null).map(s => s.rpe)), failure: sets.some(s => s.type === "failure"),
-      note: (e.sets.find(s => s.workout === w && s.note) || {}).note || "",
+      note: noteContent((e.sets.find(s => s.workout === w && s.note) || {}).note || "", null, e.name),
     }));
   } else {
     e.secSet = pool.reduce((b, s) => (s.sec || 0) > (b.sec || 0) ? s : b);
@@ -2127,6 +2158,7 @@ function renderKPIs() {
   $("#merged").textContent = "Z decyzje.md: " + [
     ...ALIASES.map(a => `${a.ex} ${a.until ? `od ${dm(a.from)} do ${dm(shiftDay(a.until, -1))} ` : ""}liczę jako ${a.to}`),
     ...PERIODS.map(p => p.assigned ? `${p.ex} od ${dm(p.from)} do ${dm(shiftDay(p.to, -1))} liczę jako ${p.name} (korekta okresu niepewnego)`
+      : p.variant ? `${p.ex} przed ${dm(p.to)} to inny wariant („${p.name}”)`
       : `${p.ex} ${p.uncertain ? `od ${dm(p.from)} do ${dm(shiftDay(p.to, -1))} to okres niepewny` : `przed ${dm(p.to)} to osobna maszyna`} („${p.name}”)`),
     ...SPLITS.map(s => `${s.ex} od ${dm(s.from)}: maszyna wg słowa w notatce ćwiczenia (${s.words.map(w => `„${w}”`).join(" / ")}; brak słowa = ${s.words[0]}, oba = niepewne)`),
   ].join(". ") + ".";
@@ -2138,7 +2170,7 @@ function renderKPIs() {
     ["Średnio w tygodniu", nf(workouts.length / wk.length, 1), `treningów (założenie: maks. ${CFG.maxPerWeek})`],
     ["Łączna objętość", totalVol >= 10000 ? nf(totalVol / 1000, 1) + " t" : kg(totalVol), `średnio ${kg(Math.round(totalVol / workouts.length))} na trening`],
     ["Czas na siłowni", fmtDur(totalMin), timed.length ? `średnio ${fmtDur(totalMin / timed.length)}` : ""],
-    ["Serie robocze", nf(sum(workouts, w => w.workingSets)), `${MODEL.exercises.length} różnych ćwiczeń`],
+    ["Serie robocze", nf(sum(workouts, w => w.workingSets)), `${new Set(MODEL.exercises.map(e => currentName(e.name))).size} różnych ćwiczeń`],
   ];
   $("#kpis").innerHTML = tiles.map(([l, v, n]) =>
     `<div class="kpi"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="note">${esc(n)}</div></div>`).join("");
@@ -2522,9 +2554,12 @@ function renderSignals() {
       const unsure = MODEL.exercises.filter(x => familyOf(x.name) === fam && x.uncertain && x.progress.length)
         .sort((a, b) => lastUse(b) - lastUse(a))[0];
       const lastU = unsure && sessionInfo(unsure, unsure.progress[unsure.progress.length - 1]);
+      // Nowy wariant (wpis „maszyna … inny wariant”) jeszcze bez treningu: stary wariant nie daje sygnałów.
+      const vp = !unsure && PERIODS.find(p => p.variant && familyOf(p.ex) === fam && !MODEL.exByName.has(p.ex) && MODEL.exByName.has(p.name));
       return [`<tr>${head(0)}<div class="why">${esc(unsure ? unsure.name : r.main)}</div></td>
         <td class="dim">${lastU ? esc(desc(lastU)) : "—"}</td><td class="nw">${bodyweight(r.main) ? NO_GOAL : goal(r.main)}</td>
         <td>${unsure ? `<span class="badge st-old">◌ Brak porównywalnych danych</span><div class="why">Ostatnie treningi w okresie niepewnym (decyzje.md). Sygnały wrócą po pierwszym treningu z rozpoznaną maszyną.</div>`
+          : vp ? `<span class="badge st-old">◌ Nowy wariant</span><div class="why">${esc(vp.ex)} od ${esc(fmtDate(vp.to))} to nowy wariant (decyzje.md); wcześniejsze treningi („${esc(vp.name)}”) są na wykresie i w rekordach, bez sygnałów. Sygnał po pierwszym treningu nowego wariantu.</div>`
           : all.length ? `<span class="badge st-old">◌ Nieużywane</span><div class="why">Żadna maszyna z tego ruchu nie była używana w ostatnich ${CFG.signalsActiveDays} dniach (ostatnio ${esc(fmtDate(new Date(lastUse(all[0].e))))}).</div>`
           : `<span class="badge st-old">◌ Brak danych</span>`}</td>
         <td>${decCell(unsure ? PERIODS.find(p => p.name === unsure.name).ex : r.main)}</td></tr>`];
@@ -2803,7 +2838,10 @@ const METRIC = {
 // okresem (wpis „maszyna … przed …”) i bez maszyn nieużywanych od ponad CFG.signalsActiveDays dni (licząc od najnowszego
 // treningu, jak w sygnałach). Pominięte zostają w rekordach. Zwraca powód pominięcia albo null.
 const cardPts = list => list.filter(p => !isExcluded(p.date));
+// Stary wariant (wpis „maszyna … inny wariant”) zostaje na karcie, dopóki jest na niej nowy wariant (bez niego: jak zwykła maszyna).
 function offCards(e, pts) {
+  const v = variantPeriod(e.name), succ = v && MODEL.exByName.get(v.ex);
+  if (v) return succ && succ.kind === e.kind ? offCards(succ, cardPts(succ.progress || succ.repsProgress || [])) : offCards({ name: "" }, pts);
   if (isClosed(e.name)) return "zamknięty okres";
   if (!pts.length) return "tylko dni wyjątków";
   const latest = MODEL.workouts[MODEL.workouts.length - 1].start;
