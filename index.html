@@ -1532,6 +1532,9 @@ const CFG = {
   // Trening z co najmniej tyloma seriami jest pełny (dalsze serie nie wchodzą do porównania); porównanie z poprzednim pełnym treningiem.
   // Pozostałe ćwiczenia z masą ciała: suma wszystkich serii roboczych.
   repsCompareFirst: { "Leg Raise Parallel Bars": 2 },
+  // Wspólne karty progresu ćwiczeń z masą ciała (tylko widok): tytuł karty i ćwiczenia (nazwy z Hevy) jako osobne serie, każda z własną linią
+  // (bez połączenia między seriami) i własną wartością (suma serii albo CFG.repsCompareFirst). Ćwiczenie z masą ciała spoza listy ma własną kartę.
+  repsCards: [{ title: "Brzuch – unoszenie na poręczach", names: ["Knee Raise Parallel Bars", "Leg Raise Parallel Bars"] }],
   // Aliasy (błędnie wybrane ćwiczenia) i okresy maszyn są w decyzje.md (typy „alias” i „maszyna”).
 };
 // Rodziny ruchu: zamienniki robiące te same partie (gdy maszyna zajęta) trafiają do jednej grupy.
@@ -1554,10 +1557,9 @@ const FAMILIES = [
   ["Rozpiętki", /(?<!reverse )\bfly\b|pec deck/i, "izolacja"],
   ["Biceps", /preacher|bicep|hammer|(?<!leg )curl/i, "izolacja"],
   ["Triceps", /tricep|pushdown|skull|\bdip/i, "izolacja"],
-  // Unoszenie nóg prostych (od 15.11 w FBW_A i FBW_B zamiast unoszenia kolan, decyzje.md 2026-11-15): osobny ruch, żeby unoszenie kolan
-  // nie zaliczało go w kontroli „Pominięte”. Masa ciała, bez celu powtórzeń, rozgrzewki, powiązań (CFG.relatedLifts) i zależności w kolejności.
-  ["Unoszenie nóg", /leg raise/i, "brzuch"],
-  ["Brzuch", /crunch|knee raise|plank|sit ?up/i, "brzuch"],
+  // Unoszenie nóg prostych (od 15.11 w FBW_A i FBW_B zamiast unoszenia kolan, decyzje.md 2026-11-15) należy do tej samej rodziny co unoszenie
+  // kolan; reguły Leg Raise (wymagany ruch, zamienniki, wiersz sygnału) są przypisane po nazwie (PLAN `byName`), ocena z CFG.repsCompareFirst.
+  ["Brzuch", /crunch|knee raise|leg raise|plank|sit ?up/i, "brzuch"],
 ];
 const familyOf = name => (FAMILIES.find(([, re]) => re.test(name)) || [name])[0];
 // Kategoria w dniu `date`: wpis „kategoria” dla tego ćwiczenia w decyzje.md (zmiana kategorii, od Daty do daty końca) nadpisuje FAMILIES.
@@ -1589,9 +1591,14 @@ const PLAN = [
 // zamienniki `subs` obowiązują razem z ruchem (od `from`).
   // `subs`: zamienniki spoza rodziny ruchu (nazwy z Hevy): zrobione zamiast ruchu nie zaliczają go, ale w kontroli „Pominięte” ℹ ma dopisek
   // „zamiennik: …”. Leg Raise od 15.11: unoszenie kolan (zastąpione ćwiczenie) i crunch (awaryjny brzuch, decyzja DB-10).
-  { main: "Leg Raise Parallel Bars", label: "Brzuch", routines: ["", "AB"], from: "2026-11-15", subs: ["Knee Raise Parallel Bars", "Crunch (Machine)"] },
+  // `byName`: pozycję zalicza tylko ćwiczenie `main` (po nazwie), a nie cała rodzina ruchu; takie ćwiczenie nie zalicza też innych pozycji
+  // ze swojej rodziny (Leg Raise i Knee Raise są w jednej rodzinie „Brzuch”, ale to osobne pozycje planu).
+  { main: "Leg Raise Parallel Bars", label: "Brzuch", routines: ["", "AB"], from: "2026-11-15", byName: true, subs: ["Knee Raise Parallel Bars", "Crunch (Machine)"] },
   { main: "Knee Raise Parallel Bars", label: "Brzuch", routines: ["ABC", "AB"], before: "2026-11-15" },
 ];
+// Czy ćwiczenie `name` należy do pozycji PLAN `r`: rodzina ruchu `main`, a przy `byName` tylko samo `main`.
+const BY_NAME = new Set(PLAN.filter(r => r.byName).map(r => r.main));
+const inSlot = (r, name) => r.byName ? name === r.main : !BY_NAME.has(name) && familyOf(name) === familyOf(r.main);
 // Rutyny ruchu w dniu `date` (z cyklu tego dnia i zakresu from / before); "" = poza rutynami.
 const routinesOn = (r, date) => (r.from && date < isoDay(r.from)) || (r.before && date >= isoDay(r.before)) ? "" : r.routines[cycleOf(date)];
 const ROUTINE_NAMES = ["A", "B", "C"];
@@ -2067,7 +2074,8 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
   // Linia łączy kolejne punkty serii; punkt `solo` (np. trening niepewny z oboma słowami w notatce) zostaje bez połączeń.
   series.forEach(s => {
     const segs = [[]];
-    for (const p of s.points) if (p.solo) segs.push([]); else segs[segs.length - 1].push(p);
+    // Punkt `off` (np. niepełny trening ćwiczenia z masą ciała) jest poza linią: linia łączy punkty sąsiednie, a sam punkt jest pusty w środku.
+    for (const p of s.points) if (p.solo) segs.push([]); else if (!p.off) segs[segs.length - 1].push(p);
     for (const g of segs.filter(g => g.length >= 2)) {
       const d = g.map((p, i) => `${i ? "L" : "M"}${X(p.d)},${Y(p.v)}`).join("");
       // Poświata linii: szersza, półprzezroczysta kopia pod linią (bez filtra rozmycia). Linia przerywana (okres niepewny) bez poświaty.
@@ -2080,12 +2088,12 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
     if (p.note) svgEl("circle", { cx: X(p.d), cy: Y(p.v), r: 8, fill: "none", stroke: css("--text-secondary"), "stroke-width": 1.5 }, svg);
   }));
   const dots = series.map(s => s.points.map(p =>
-    svgEl("path", { d: shapePath(s.shape || "circle", X(p.d), Y(p.v), 4), fill: s.color, stroke: surface, "stroke-width": 2 }, svg)));
+    svgEl("path", { d: shapePath(s.shape || "circle", X(p.d), Y(p.v), 4), ...(p.off ? { fill: surface, stroke: s.color, class: "off" } : { fill: s.color, stroke: surface }), "stroke-width": 2 }, svg)));
 
   // Etykieta przy ostatnim punkcie każdej serii, bez nachodzenia na siebie.
   const placed = [];
   series.forEach(s => {
-    const p = s.points[s.points.length - 1], x = X(p.d), y = Y(p.v) - 10;
+    const p = s.points.filter(p => !p.off).pop() || s.points[s.points.length - 1], x = X(p.d), y = Y(p.v) - 10;   // etykieta nie przy punkcie poza linią
     if (placed.some(q => Math.abs(q.x - x) < 60 && Math.abs(q.y - y) < 14)) return;
     placed.push({ x, y });
     svgEl("text", { x: Math.max(x, m.l + 40), y, "text-anchor": "end", "font-size": 13, "font-weight": 600, fill: css("--text-primary") }, svg)
@@ -2522,7 +2530,7 @@ const COMPOUND = new Set(["zlozone_maszyna", "zlozone_wolne"]);
 const seqOf = w => [...new Set(w.sets.map(s => s.ex))].filter(n => MODEL.exByName.get(n).kind !== "cardio");
 // Ruchy wymagane w treningu: pozycje PLAN z rutyną treningu w cyklu z dnia treningu; trening bez rozpoznanej rutyny: ruchy wspólne dla wszystkich rutyn cyklu.
 // Pozycje PLAN z dnia treningu (routinesOn: cykl i zakres from / before).
-const slot = r => ({ label: r.label, fam: familyOf(r.main), main: r.main, subs: r.subs || [] });
+const slot = r => ({ label: r.label, r, main: r.main, subs: r.subs || [] });
 const slotsFor = w => {
   const n = routineOf(w), on = r => routinesOn(r, w.start);
   return PLAN.filter(r => n ? on(r).includes(n) : on(r) && ROUTINE_NAMES.every(x => on(r).includes(x))).map(slot);
@@ -2532,13 +2540,13 @@ const planNow = () => new Date(Math.max(Date.now(), +MODEL.workouts[MODEL.workou
 const cycleNow = () => cycleOf(planNow());
 // Ćwiczenie z rutyn obecnego cyklu (rodzina ruchu z pozycji PLAN z rutynami w tym dniu). Spoza rutyn (np. Leg Extension od cyklu 2,
 // Knee Raise od 15.11): bez listy „gotowe”, zastojów i „do obserwacji”; historia zostaje na wykresach i w rekordach.
-const inCurrentRoutines = name => { const d = planNow(); return PLAN.some(r => routinesOn(r, d) && familyOf(r.main) === familyOf(name)); };
+const inCurrentRoutines = name => { const d = planNow(); return PLAN.some(r => routinesOn(r, d) && inSlot(r, name)); };
 
 // Kontrola kolejności (decyzje.md 29.10): wszystkie ruchy z rutyny (pominięcie = informacja ℹ, liczona jako zgodna; zamiennik z tej samej
 // rodziny ruchu liczy się jako ten ruch, ćwiczenie spoza rutyny nie jest błędem) i izolacja po swoim ćwiczeniu głównym; reszta kolejności dowolna.
 function orderCheck(w) {
   const seq = seqOf(w), r = {};
-  const miss = slotsFor(w).filter(sl => !seq.some(n => familyOf(n) === sl.fam));
+  const miss = slotsFor(w).filter(sl => !seq.some(n => inSlot(sl.r, n)));
   const missing = miss.map(sl => sl.label.toLowerCase());
   r.missing = missing.length ? { st: "exc", t: "pominięte: " + missing.join(", ") } : { st: "ok" };
   // Zamiast pominiętego ruchu zrobiono zamiennik z PLAN `subs` (np. Knee Raise albo Crunch zamiast Leg Raise od 15.11): dopisek, nadal ℹ.
@@ -2587,11 +2595,10 @@ function renderSignals() {
   let i = 0;
   const ready = [];
   const rows = PLAN.flatMap(r => {
-    const fam = familyOf(r.main);
-    // Każda aktywna maszyna z rodziny ruchu osobno (osobny ciężar), od ostatnio używanej.
+    // Każda aktywna maszyna z rodziny ruchu osobno (osobny ciężar), od ostatnio używanej; pozycja `byName` tylko swoje ćwiczenie (inSlot).
     // Ćwiczenia z masą ciała (kind "reps") mają własną ocenę (repsStats); ćwiczenie główne z PLAN zawsze pierwsze.
     const all = MODEL.exercises
-      .filter(x => familyOf(x.name) === fam && (x.kind === "weight" || x.kind === "reps") && !isClosed(x.name))
+      .filter(x => inSlot(r, x.name) &&(x.kind === "weight" || x.kind === "reps") && !isClosed(x.name))
       .map(x => ({ e: x, s: x.kind === "reps" ? repsStats(x) : exStats(x) })).filter(x => x.s)
       .sort((a, b) => (b.e.name === r.main) - (a.e.name === r.main) || lastUse(b.e) - lastUse(a.e));
     const machines = all.filter(x => active(x.e));
@@ -2615,11 +2622,11 @@ function renderSignals() {
     }
     if (!machines.length) {
       // Same treningi z okresu niepewnego (decyzje.md): nie ma z czym porównywać, do pierwszego treningu na nazwanej maszynie.
-      const unsure = MODEL.exercises.filter(x => familyOf(x.name) === fam && x.uncertain && x.progress.length)
+      const unsure = MODEL.exercises.filter(x => inSlot(r, x.name) && x.uncertain && x.progress.length)
         .sort((a, b) => lastUse(b) - lastUse(a))[0];
       const lastU = unsure && sessionInfo(unsure, unsure.progress[unsure.progress.length - 1]);
       // Nowy wariant (wpis „maszyna … inny wariant”) jeszcze bez treningu: stary wariant nie daje sygnałów.
-      const vp = !unsure && PERIODS.find(p => p.variant && familyOf(p.ex) === fam && !MODEL.exByName.has(p.ex) && MODEL.exByName.has(p.name));
+      const vp = !unsure && PERIODS.find(p => p.variant && inSlot(r, p.ex) &&!MODEL.exByName.has(p.ex) && MODEL.exByName.has(p.name));
       return [`<tr>${head(0)}<div class="why">${esc(unsure ? unsure.name : r.main)}</div></td>
         <td class="dim">${lastU ? esc(desc(lastU)) : "—"}</td><td class="nw">${bodyweight(r.main) ? NO_GOAL : goal(r.main)}</td>
         <td>${unsure ? `<span class="badge st-old">◌ Brak porównywalnych danych</span><div class="why">Ostatnie treningi w okresie niepewnym (decyzje.md). Sygnały wrócą po pierwszym treningu z rozpoznaną maszyną.</div>`
@@ -2938,59 +2945,86 @@ const MARK_TYPES_ALL = new Set(["kategoria", "wyjatek"]);                       
 // z datą z CFG.cycleFrom); pozostałe wpisy tego rodzaju nie są znacznikami.
 // Wyjątek od limitu treningów w tygodniu nie dotyczy progresji, więc nie jest znacznikiem.
 const isCycleStart = d => d === PLAN_CHANGES[0] || PLAN_CHANGES.includes(d) && CFG.cycleFrom.some(s => +isoDay(s) === +d.date);
-const markersFor = fam => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) && !isLimitException(d) || isCycleStart(d) : MARK_TYPES.has(d.type) && familyOf(d.ex) === fam).map(d => ({ d: d.date,
+// `names` (karta ćwiczeń z masą ciała): także wpis „zasada” dla * z datą `from` pozycji PLAN jednego z tych ćwiczeń (zmiana ćwiczenia
+// w rutynach, np. Leg Raise zamiast Knee Raise od 15.11).
+const isMoveChange = (d, names) => d.type === "zasada" && PLAN.some(r => r.from && names.includes(r.main) && +isoDay(r.from) === +d.date);
+const markersFor = (fam, names = []) => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) && !isLimitException(d) || isCycleStart(d) || isMoveChange(d, names) : MARK_TYPES.has(d.type) && familyOf(d.ex) === fam).map(d => ({ d: d.date,
   html: `<div class="t">${esc(fmtDateLong(d.date))}</div><div class="muted" style="margin-bottom:4px">decyzje.md · ${esc(d.ex === "*" ? "cały plan" : d.ex)}</div>` +
     `<div><b>${esc(d.type)}</b>: ${esc(d.change)}</div><div class="n">${esc(d.why)}</div>` }));
 
-// Karta ćwiczenia z masą ciała: w trybie Ciężar i Szac. 1RM suma powtórzeń na trening, w trybie RPE średnie RPE.
-function repsCard(host, e, M) {
+// Karta ćwiczeń z masą ciała: w trybie Ciężar i Szac. 1RM suma powtórzeń na trening, w trybie RPE średnie RPE.
+// `g`: { title, list } — jedno ćwiczenie albo wspólna karta z CFG.repsCards (każde ćwiczenie = osobna seria z własną linią, kolorem
+// i kształtem punktu; serie nie są ze sobą połączone, bo ich wartości liczy się inaczej).
+function repsCard(host, g, M) {
   const rpeMode = progressMode === "rpe";
   // Wartość treningu = `cmp` (jak w sygnale; Leg Raise: suma 2 pierwszych serii, CFG.repsCompareFirst).
   const val = p => rpeMode ? (p.rpe == null ? null : Math.round(p.rpe * 10) / 10) : p.cmp;
-  const pts = e.cardProgress.filter(p => val(p) != null);
   const unit = rpeMode ? "" : "powt.", fmt = rpeMode ? v => nf(v, 1) : v => nf(v);
-  const card = document.createElement("div");
-  card.className = "mini";
-  let meta = `<div class="meta"><span>Za mało danych dla tej miary</span></div>`;
-  if (pts.length) {
-    const a = val(pts[0]), b = val(pts[pts.length - 1]), d = b - a;
-    const range = pts.length > 1 ? `${fmt(a)} → ${fmt(b)}${unit ? " " + unit : ""}` : `${fmt(a)}${unit ? " " + unit : ""}`;
-    const better = rpeMode ? d <= -0.3 : d > 0, worse = rpeMode ? d >= 0.3 : d < 0;
-    const txt = rpeMode ? (better ? " łatwiej" : worse ? " trudniej" : "") : "";
-    const delta = pts.length < 2 ? "" : better || worse ? `<span${better ? ' class="delta-up"' : ""}>${d > 0 ? "▲" : "▼"} ${esc(fmt(Math.abs(d)))}${unit ? " " + unit : ""}${txt}</span>`
-      : `<span>${rpeMode ? "stabilnie" : "bez zmian"}</span>`;
-    meta = `<div class="meta"><span>${esc(e.name)} · ${pts.length} ${plTrening(pts.length)} · ${esc(range)} · masa ciała</span>${delta}</div>`;
-  }
-  card.innerHTML = `<h3>${esc(FAMILIES.some(([, re]) => re.test(e.name)) ? familyOf(e.name) : e.name)}</h3>${meta}<div class="chart"></div>`;
-  host.appendChild(card);
-  if (!pts.length) return;
-  const series = [{ e, name: e.name, color: css(SERIES_VARS[0]), shape: SHAPES[0], dashed: false,
-    points: pts.map(p => ({ d: p.date, v: val(p), note: p.note, title: p.workout.title,
-      rows: tipRow("Serie", p.reps.join(" / ")) +
-        (p.first ? tipRow(`Suma ${p.first} pierwszych serii`, nf(p.cmp) + (p.full ? "" : " (niepełny trening)")) +
+  const u = unit ? " " + unit : "";
+  // Kolor i kształt według pozycji ćwiczenia na liście karty (stałe, także gdy inna seria nie ma danych dla miary).
+  const series = g.list.map((e, i) => ({ e, name: e.name, color: css(SERIES_VARS[i]), shape: SHAPES[i], dashed: false,
+    // Niepełny trening (mniej serii niż ocenianych, CFG.repsCompareFirst): suma nieporównywalna, więc punkt pusty i poza linią (`off`),
+    // żeby nie wyglądał jak spadek; w trybie RPE zwykły punkt (średnie RPE nie zależy od liczby serii).
+    points: e.cardProgress.filter(p => val(p) != null).map(p => ({ d: p.date, v: val(p), note: p.note, title: p.workout.title, off: !rpeMode && !p.full,
+      rows: (p.full ? "" : tipRow("Niepełny trening", `${p.reps.length} z ${p.first} ocenianych serii${rpeMode ? "" : ", poza linią"}`)) +
+        tipRow("Serie", p.reps.join(" / ")) +
+        (p.first ? tipRow(`Suma ${p.first} pierwszych serii`, p.full ? nf(p.cmp) : `${nf(p.cmp)} (bez porównania)`) +
           (p.reps.length > p.first ? tipRow("Dalsze serie (informacyjnie)", p.reps.slice(p.first).join(" / ")) : "")
           : tipRow("Suma powtórzeń", nf(p.sum))) +
-        (p.rpe != null ? tipRow("Średnie RPE", nf(p.rpe, 1)) : "") + (p.failure ? tipRow("Do upadku", "tak") : "") })) }];
-  lineChart($(".chart", card), { series, markers: markersFor(familyOf(e.name)), unit, fmt, yFixed: rpeMode ? M.yFixed : null, drawKey: "reps:" + e.name });
+        (p.rpe != null ? tipRow("Średnie RPE", nf(p.rpe, 1)) : "") + (p.failure ? tipRow("Do upadku", "tak") : "") })) })).filter(s => s.points.length);
+  const line = s => {
+    // Zakres i zmiana z treningów pełnych (bez punktów poza linią); liczba treningów ze wszystkich.
+    const full = s.points.filter(p => !p.off), pts = full.length ? full : s.points, a = pts[0].v, b = pts[pts.length - 1].v, d = b - a;
+    const range = pts.length > 1 ? `${fmt(a)} → ${fmt(b)}${u}` : `${fmt(a)}${u}`;
+    const better = rpeMode ? d <= -0.3 : d > 0, worse = rpeMode ? d >= 0.3 : d < 0;
+    const txt = rpeMode ? (better ? " łatwiej" : worse ? " trudniej" : "") : "";
+    const delta = pts.length < 2 ? "" : better || worse ? `<span${better ? ' class="delta-up"' : ""}>${d > 0 ? "▲" : "▼"} ${esc(fmt(Math.abs(d)))}${u}${txt}</span>`
+      : `<span>${rpeMode ? "stabilnie" : "bez zmian"}</span>`;
+    return { n: s.points.length, range, delta };
+  };
+  // Co liczy seria (legenda wspólnej karty): suma wszystkich serii albo N pierwszych (CFG.repsCompareFirst).
+  const basis = e => rpeMode ? "" : CFG.repsCompareFirst[e.name] ? ` · suma ${CFG.repsCompareFirst[e.name]} pierwszych serii` : " · suma serii";
+  let meta = `<div class="meta"><span>Za mało danych dla tej miary</span></div>`;
+  if (series.length === 1) {
+    const l = line(series[0]);
+    meta = `<div class="meta"><span>${esc(series[0].name)} · ${l.n} ${plTrening(l.n)} · ${esc(l.range)} · masa ciała</span>${l.delta}</div>`;
+  } else if (series.length) meta = series.map(s => {
+    const l = line(s);
+    return `<div class="meta"><span>${seriesIcon(s.shape, s.color, s.dashed)}${esc(s.name)}${basis(s.e)} · ${l.n}× · ${esc(l.range)}</span>${l.delta}</div>`;
+  }).join("");
+  const first = g.list[0].name;
+  const card = document.createElement("div");
+  card.className = "mini";
+  card.innerHTML = `<h3>${esc(g.title || (FAMILIES.some(([, re]) => re.test(first)) ? familyOf(first) : first))}</h3>${meta}<div class="chart"></div>`;
+  host.appendChild(card);
+  if (!series.length) return;
+  lineChart($(".chart", card), { series, markers: markersFor(familyOf(first), g.list.map(e => e.name)), unit, fmt, yFixed: rpeMode ? M.yFixed : null,
+    drawKey: "reps:" + (g.title || first) });
 }
 
 function renderProgress() {
   const M = METRIC[progressMode];
   $("#progress-sub").textContent = M.sub + " Pionowa przerywana linia z rombem to wpis z decyzje.md (najedź, by zobaczyć treść); linia przerywana serii to okres niepewny." +
     " Kółko wokół punktu = trening z notatką (treść w dymku)." +
-    " Ćwiczenia z masą ciała mają osobną kartę: suma powtórzeń z serii roboczych na trening (" +
-    Object.entries(CFG.repsCompareFirst).map(([n, k]) => `${n}: z ${k} pierwszych serii, `).join("") + "w trybie RPE średnie RPE).";
+    " Ćwiczenia z masą ciała mają osobną kartę (unoszenie kolan i nóg na poręczach wspólną, każde ćwiczenie z własną linią): suma powtórzeń z serii roboczych na trening (" +
+    Object.entries(CFG.repsCompareFirst).map(([n, k]) => `${n}: z ${k} pierwszych serii, `).join("") + "w trybie RPE średnie RPE)." +
+    (Object.keys(CFG.repsCompareFirst).length ? " Pusty punkt poza linią = niepełny trening (mniej serii niż ocenianych), bez porównania." : "");
   const host = $("#multiples");
   host.innerHTML = "";
   const { fams, hidden } = moveFamilies();
-  // Ćwiczenia z masą ciała mają osobne karty (suma powtórzeń zamiast kilogramów, więc nie na wspólnej osi z maszyną).
-  const repsEx = MODEL.exercises.filter(e => e.kind === "reps" && e.repsProgress).filter(e => {
-    e.cardProgress = cardPts(e.repsProgress);
-    const why = offCards(e, e.cardProgress);
-    if (why) hidden.push({ name: e.name, why });
-    return !why && e.cardProgress.length >= 2;
-  });
-  const cards = [...fams.filter(f => f.sessions >= 2).map(f => ({ f, n: f.sessions })), ...repsEx.map(e => ({ e, n: e.cardProgress.length }))]
+  // Ćwiczenia z masą ciała mają osobne karty (suma powtórzeń zamiast kilogramów, więc nie na wspólnej osi z maszyną): jedna karta na ćwiczenie
+  // albo wspólna karta z CFG.repsCards. Na wspólnej karcie ćwiczenie nieużywane (np. zastąpione) zostaje, dopóki inne ćwiczenie karty jest aktywne.
+  const repsOn = MODEL.exercises.filter(e => e.kind === "reps" && e.repsProgress);
+  for (const e of repsOn) e.cardProgress = cardPts(e.repsProgress);
+  const repsCards = [...CFG.repsCards.map(c => ({ title: c.title, list: c.names.map(n => repsOn.find(e => e.name === n)).filter(Boolean) })),
+    ...repsOn.filter(e => !CFG.repsCards.some(c => c.names.includes(e.name))).map(e => ({ title: null, list: [e] }))]
+    .map(g => {
+      const why = new Map(g.list.map(e => [e, offCards(e, e.cardProgress)]));
+      const on = g.list.some(e => !why.get(e));
+      for (const e of g.list) if (why.get(e) && !(on && e.cardProgress.length)) hidden.push({ name: e.name, why: why.get(e) });
+      return { title: g.title, list: on ? g.list.filter(e => e.cardProgress.length) : [] };
+    }).filter(g => sum(g.list, e => e.cardProgress.length) >= 2);
+  const cards = [...fams.filter(f => f.sessions >= 2).map(f => ({ f, n: f.sessions })), ...repsCards.map(g => ({ e: g, n: sum(g.list, e => e.cardProgress.length) }))]
     .sort((a, b) => b.n - a.n);
   for (const { f, e } of cards) {
     if (e) { repsCard(host, e, M); continue; }
