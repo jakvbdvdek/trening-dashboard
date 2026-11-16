@@ -1449,6 +1449,7 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-11-12 | * | zasada | Gotowe do podniesienia: 2 czyste treningi z rzędu i w obu ostatnia seria RPE ≤ 9; najwyżej 2 podniesienia na trening, po jednym z grupy pchanie / ciągnięcie / nogi | Decyzja Jakuba (DB-08); data w CFG.raiseBothFrom, grupy w CFG.raiseGroups, limit w CFG.maxRaisesPerSession |
 | 2026-11-12 | Shoulder Press (Machine Plates) | maszyna | Od 12.11 ustawienie przodem do oparcia; wpisy przed 12.11 to inny wariant (klasyczne ustawienie) | Decyzja Jakuba 15.11: ustawienie przodem do oparcia zostaje na stałe; 25 kg to nowy punkt odniesienia, nie podniesienie |
 | 2026-11-12 | * | zasada | Korekta wpisu z 2026-11-12 (gotowość do podniesienia i limit podniesień): poprawny powód to „Decyzja Jakuba 12.11 po analizie logów z 10.11: podniesienia wchodzą coraz ciężej”; treść zasady bez zmian | Poprawka powodu (DB-09); dane w CFG.raiseBothFrom, CFG.raiseGroups i CFG.maxRaisesPerSession bez zmian |
+| 2026-11-15 | * | zasada | Brzuch: unoszenie nóg prostych na poręczach zamiast unoszenia kolan, na stałe w FBW_A i FBW_B; 2 albo 3 serie; ocena = suma powtórzeń z 2 pierwszych serii | Decyzja Jakuba 15–16.11: trudniejsza wersja ćwiczenia zamiast dokładania powtórzeń |
 </script>
 <script>
 "use strict";
@@ -1527,6 +1528,10 @@ const CFG = {
     "Shoulder Press (Machine Plates)": ["Przodem do oparcia"],
     "Lat Pulldown (Machine)": ["Nachwyt"],
   },
+  // Ćwiczenia z masą ciała ocenione sumą powtórzeń z tylu PIERWSZYCH serii roboczych (nazwa w Hevy → liczba serii; decyzje.md 2026-11-15).
+  // Trening z co najmniej tyloma seriami jest pełny (dalsze serie nie wchodzą do porównania); porównanie z poprzednim pełnym treningiem.
+  // Pozostałe ćwiczenia z masą ciała: suma wszystkich serii roboczych.
+  repsCompareFirst: { "Leg Raise Parallel Bars": 2 },
   // Aliasy (błędnie wybrane ćwiczenia) i okresy maszyn są w decyzje.md (typy „alias” i „maszyna”).
 };
 // Rodziny ruchu: zamienniki robiące te same partie (gdy maszyna zajęta) trafiają do jednej grupy.
@@ -1549,7 +1554,10 @@ const FAMILIES = [
   ["Rozpiętki", /(?<!reverse )\bfly\b|pec deck/i, "izolacja"],
   ["Biceps", /preacher|bicep|hammer|(?<!leg )curl/i, "izolacja"],
   ["Triceps", /tricep|pushdown|skull|\bdip/i, "izolacja"],
-  ["Brzuch", /crunch|knee raise|leg raise|plank|sit ?up/i, "brzuch"],
+  // Unoszenie nóg prostych (od 15.11 w FBW_A i FBW_B zamiast unoszenia kolan, decyzje.md 2026-11-15): osobny ruch, żeby unoszenie kolan
+  // nie zaliczało go w kontroli „Pominięte”. Masa ciała, bez celu powtórzeń, rozgrzewki, powiązań (CFG.relatedLifts) i zależności w kolejności.
+  ["Unoszenie nóg", /leg raise/i, "brzuch"],
+  ["Brzuch", /crunch|knee raise|plank|sit ?up/i, "brzuch"],
 ];
 const familyOf = name => (FAMILIES.find(([, re]) => re.test(name)) || [name])[0];
 // Kategoria w dniu `date`: wpis „kategoria” dla tego ćwiczenia w decyzje.md (zmiana kategorii, od Daty do daty końca) nadpisuje FAMILIES.
@@ -1577,8 +1585,15 @@ const PLAN = [
   { main: "Lateral Raise (Dumbbell)", label: "Wznosy bokiem", routines: ["BC", "ABC"] },
   { main: "Preacher Curl (Machine)", label: "Biceps", routines: ["ABC", "ABC"] },
   { main: "Seated Triceps Press", label: "Triceps", routines: ["ABC", "ABC"] },
-  { main: "Knee Raise Parallel Bars", label: "Brzuch", routines: ["ABC", "AB"] },
+  // `from` / `before` (opcjonalne, RRRR-MM-DD): ruch w rutynach od dnia `from` włącznie / przed dniem `before`; poza tym zakresem jak "" (spoza rutyn);
+// zamienniki `subs` obowiązują razem z ruchem (od `from`).
+  // `subs`: zamienniki spoza rodziny ruchu (nazwy z Hevy): zrobione zamiast ruchu nie zaliczają go, ale w kontroli „Pominięte” ℹ ma dopisek
+  // „zamiennik: …”. Leg Raise od 15.11: unoszenie kolan (zastąpione ćwiczenie) i crunch (awaryjny brzuch, decyzja DB-10).
+  { main: "Leg Raise Parallel Bars", label: "Brzuch", routines: ["", "AB"], from: "2026-11-15", subs: ["Knee Raise Parallel Bars", "Crunch (Machine)"] },
+  { main: "Knee Raise Parallel Bars", label: "Brzuch", routines: ["ABC", "AB"], before: "2026-11-15" },
 ];
+// Rutyny ruchu w dniu `date` (z cyklu tego dnia i zakresu from / before); "" = poza rutynami.
+const routinesOn = (r, date) => (r.from && date < isoDay(r.from)) || (r.before && date >= isoDay(r.before)) ? "" : r.routines[cycleOf(date)];
 const ROUTINE_NAMES = ["A", "B", "C"];
 // Cykl planu w dniu `date`: 0 = cykl 1, 1 = cykl 2 (od CFG.cycleFrom[0]) …
 const cycleOf = date => CFG.cycleFrom.filter(s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d) <= date; }).length;
@@ -1883,8 +1898,11 @@ function analyzeExercise(e) {
     // Ćwiczenie z masą ciała (bez stałego celu): na każdym treningu serie robocze i suma powtórzeń (wykres i sygnał).
     const byW = new Map();
     for (const s of pool.filter(s => s.reps > 0)) { if (!byW.has(s.workout)) byW.set(s.workout, []); byW.get(s.workout).push(s); }
+    // `cmp`: wartość treningu w sygnale i na karcie progresu; przy CFG.repsCompareFirst suma z N pierwszych serii (`first`, `full` = co najmniej N serii).
+    const n = CFG.repsCompareFirst[e.name];
     e.repsProgress = [...byW.entries()].map(([w, sets]) => ({
       workout: w, date: w.start, reps: sets.map(s => s.reps), sum: sum(sets, s => s.reps),
+      cmp: sum(n ? sets.slice(0, n) : sets, s => s.reps), first: n || null, full: !n || sets.length >= n,
       rpe: mean(sets.filter(s => s.rpe != null).map(s => s.rpe)), failure: sets.some(s => s.type === "failure"),
       note: noteContent((e.sets.find(s => s.workout === w && s.note) || {}).note || "", null, e.name),
     }));
@@ -2462,19 +2480,25 @@ const routineOf = w => {
 
 // Ćwiczenia z masą ciała (np. unoszenie kolan): bez stałego celu, bez zastojów i podniesień ciężaru.
 // Ocena: suma powtórzeń z serii roboczych porównana z poprzednim treningiem tego ćwiczenia (bez dni-wyjątków).
+// CFG.repsCompareFirst: suma tylko z N pierwszych serii (`cmp`), porównanie z poprzednim pełnym treningiem (co najmniej N serii).
 function repsStats(e) {
   if (!e.repsProgress) return null;
   const info = e.repsProgress.filter(p => !isExcluded(p.date));
   if (!info.length) return null;
-  return { reps: true, info, li: info[info.length - 1], prev: info[info.length - 2] || null };
+  const li = info[info.length - 1];
+  return { reps: true, info, li, prev: info.slice(0, -1).filter(p => p.full).pop() || null };
 }
-const repsDesc = p => `${p.reps.join("/")} = ${p.sum} powt. · ${fmtDate(p.date)}${p.rpe != null ? ` · RPE ${nf(p.rpe, 1)}` : ""}`;
+const repsDesc = p => (p.first && p.reps.length > p.first ? `${p.reps.join("/")} · ${p.first} pierwsze = ${p.cmp}` : `${p.reps.join("/")} = ${p.cmp}`) +
+  ` powt. · ${fmtDate(p.date)}${p.rpe != null ? ` · RPE ${nf(p.rpe, 1)}` : ""}`;
 function repsSignal(s) {
   const { li, prev } = s;
+  if (!li.full) return { st: "old", label: "◌ Niepełny trening", why: `${li.reps.length} z ${li.first} serii ocenianych; porównanie po pełnym treningu.` };
   if (!prev) return { st: "old", label: "◌ Brak porównania", why: "Pierwszy trening tego ćwiczenia." };
-  const d = li.sum - prev.sum;
-  const base = `Suma ${li.sum} (${li.reps.join("/")}) wobec ${prev.sum} (${prev.reps.join("/")}) ${fmtDate(prev.date)}.`;
-  const sets = li.reps.length !== prev.reps.length ? ` Inna liczba serii (${li.reps.length} wobec ${prev.reps.length}).` : "";
+  const d = li.cmp - prev.cmp;
+  const part = p => p.first ? p.reps.slice(0, p.first).join("/") : p.reps.join("/");
+  const base = `Suma ${li.cmp} (${part(li)}) wobec ${prev.cmp} (${part(prev)}) ${fmtDate(prev.date)}` +
+    (li.first ? `; liczą się ${li.first} pierwsze serie robocze (CFG.repsCompareFirst).` : ".");
+  const sets = !li.first && li.reps.length !== prev.reps.length ? ` Inna liczba serii (${li.reps.length} wobec ${prev.reps.length}).` : "";
   if (d > 0) return { st: "up", label: `▲ Lepiej (+${d})`, why: base + sets };
   if (d < 0) return { st: "down", label: `▼ Gorzej (−${-d})`, why: base + sets };
   return { st: "hold", label: "● Tak samo", why: base + sets };
@@ -2497,24 +2521,30 @@ const needsWarmup = (n, date) => HEAVY.test(n) && !CFG.freeWeight.test(n) ||
 const COMPOUND = new Set(["zlozone_maszyna", "zlozone_wolne"]);
 const seqOf = w => [...new Set(w.sets.map(s => s.ex))].filter(n => MODEL.exByName.get(n).kind !== "cardio");
 // Ruchy wymagane w treningu: pozycje PLAN z rutyną treningu w cyklu z dnia treningu; trening bez rozpoznanej rutyny: ruchy wspólne dla wszystkich rutyn cyklu.
-const slot = (main, label) => ({ label, fam: familyOf(main) });
-const ROUTINE_SLOTS = CFG.cycleFrom.concat([null]).map((_, c) =>
-  Object.fromEntries(ROUTINE_NAMES.map(n => [n, PLAN.filter(r => r.routines[c].includes(n)).map(r => slot(r.main, r.label))])));
-const COMMON_SLOTS = ROUTINE_SLOTS.map((_, c) => PLAN.filter(r => ROUTINE_NAMES.every(n => r.routines[c].includes(n))).map(r => slot(r.main, r.label)));
-// Obecny cykl: z dnia dzisiejszego albo najnowszego treningu, jeśli jest późniejszy (np. fikcyjne treningi w testach).
-const cycleNow = () => cycleOf(new Date(Math.max(Date.now(), +MODEL.workouts[MODEL.workouts.length - 1].start)));
-// Ćwiczenie z rutyn obecnego cyklu (rodzina ruchu z pozycji PLAN z rutynami w tym cyklu). Spoza rutyn (np. Leg Extension od cyklu 2):
-// bez listy „gotowe”, zastojów i „do obserwacji”; historia zostaje na wykresach i w rekordach.
-const inCurrentRoutines = name => { const c = cycleNow(); return PLAN.some(r => r.routines[c] && familyOf(r.main) === familyOf(name)); };
-const slotsFor = w => { const c = cycleOf(w.start); return ROUTINE_SLOTS[c][routineOf(w)] || COMMON_SLOTS[c]; };
+// Pozycje PLAN z dnia treningu (routinesOn: cykl i zakres from / before).
+const slot = r => ({ label: r.label, fam: familyOf(r.main), main: r.main, subs: r.subs || [] });
+const slotsFor = w => {
+  const n = routineOf(w), on = r => routinesOn(r, w.start);
+  return PLAN.filter(r => n ? on(r).includes(n) : on(r) && ROUTINE_NAMES.every(x => on(r).includes(x))).map(slot);
+};
+// Obecny dzień planu: dzisiaj albo dzień najnowszego treningu, jeśli jest późniejszy (np. fikcyjne treningi w testach); obecny cykl z tego dnia.
+const planNow = () => new Date(Math.max(Date.now(), +MODEL.workouts[MODEL.workouts.length - 1].start));
+const cycleNow = () => cycleOf(planNow());
+// Ćwiczenie z rutyn obecnego cyklu (rodzina ruchu z pozycji PLAN z rutynami w tym dniu). Spoza rutyn (np. Leg Extension od cyklu 2,
+// Knee Raise od 15.11): bez listy „gotowe”, zastojów i „do obserwacji”; historia zostaje na wykresach i w rekordach.
+const inCurrentRoutines = name => { const d = planNow(); return PLAN.some(r => routinesOn(r, d) && familyOf(r.main) === familyOf(name)); };
 
 // Kontrola kolejności (decyzje.md 29.10): wszystkie ruchy z rutyny (pominięcie = informacja ℹ, liczona jako zgodna; zamiennik z tej samej
 // rodziny ruchu liczy się jako ten ruch, ćwiczenie spoza rutyny nie jest błędem) i izolacja po swoim ćwiczeniu głównym; reszta kolejności dowolna.
 function orderCheck(w) {
   const seq = seqOf(w), r = {};
-  const missing = slotsFor(w).filter(sl => !seq.some(n => familyOf(n) === sl.fam)).map(sl => sl.label.toLowerCase());
+  const miss = slotsFor(w).filter(sl => !seq.some(n => familyOf(n) === sl.fam));
+  const missing = miss.map(sl => sl.label.toLowerCase());
   r.missing = missing.length ? { st: "exc", t: "pominięte: " + missing.join(", ") } : { st: "ok" };
-  if (!routineOf(w)) r.missing.note = "nie rozpoznano rutyny po tytule (wymagane ruchy wspólne dla FBW_A, B, C)";
+  // Zamiast pominiętego ruchu zrobiono zamiennik z PLAN `subs` (np. Knee Raise albo Crunch zamiast Leg Raise od 15.11): dopisek, nadal ℹ.
+  const subs = miss.flatMap(sl => sl.subs.filter(x => seq.includes(x)).map(x => `zamiennik: ${x} (zamiast ${sl.main})`));
+  const notes = [...subs, ...(!routineOf(w) ? ["nie rozpoznano rutyny po tytule (wymagane ruchy wspólne dla FBW_A, B, C)"] : [])];
+  if (notes.length) r.missing.note = notes.join("; ");
   // Izolacja po ćwiczeniu głównym: pary z CFG.relatedLifts (Chest Press (Machine) = obie maszyny z notatki), kolejność z CSV (seqOf).
   // Ćwiczenia głównego, którego w treningu nie było, nie oceniam.
   const pairs = seq.flatMap(n => seq.filter(m => m !== n && relatedOf(n).some(x => m === x || sourceOf(m) === x)).map(m => ({ iso: n, main: m })));
@@ -2566,7 +2596,7 @@ function renderSignals() {
       .sort((a, b) => (b.e.name === r.main) - (a.e.name === r.main) || lastUse(b.e) - lastUse(a.e));
     const machines = all.filter(x => active(x.e));
     // Ruch spoza rutyn obecnego cyklu bez żadnych danych (np. hip thrust przed cyklem 2) nie ma wiersza.
-    const routines = r.routines[cycleNow()];
+    const routines = routinesOn(r, planNow());
     if (!routines && !all.length) return [];
     i++;
     // Tag z rutynami obecnego cyklu, gdy ruch nie występuje we wszystkich.
@@ -2576,7 +2606,8 @@ function renderSignals() {
     // Ruch spoza rutyn obecnego cyklu (od startu cyklu): tylko tag „poza rutynami” i ostatni wynik, bez plakietki sygnału i bez okna
     // aktywnych maszyn (CFG.signalsActiveDays); każda maszyna z danymi osobno. Historia zostaje na wykresach i w rekordach.
     if (!routines) {
-      const c = cycleNow(), since = c ? ` (od ${fmtDate(isoDay(CFG.cycleFrom[c - 1]))})` : "";
+      const c = cycleNow(), since = r.before && planNow() >= isoDay(r.before) ? ` (od ${fmtDate(isoDay(r.before))})`
+        : c ? ` (od ${fmtDate(isoDay(CFG.cycleFrom[c - 1]))})` : "";
       return all.map(({ e, s }, k) => `<tr>${head(k)}<div class="why">${esc(e.name)}</div></td>
         <td class="dim">${esc(s.reps ? repsDesc(s.li) : desc(s.li))}</td><td class="nw dim">—</td>
         <td><div class="why">Poza rutynami obecnego cyklu${esc(since)}: bez oceny, listy „gotowe”, zastojów i „Stanu planu”.</div></td>
@@ -2914,7 +2945,8 @@ const markersFor = fam => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.ha
 // Karta ćwiczenia z masą ciała: w trybie Ciężar i Szac. 1RM suma powtórzeń na trening, w trybie RPE średnie RPE.
 function repsCard(host, e, M) {
   const rpeMode = progressMode === "rpe";
-  const val = p => rpeMode ? (p.rpe == null ? null : Math.round(p.rpe * 10) / 10) : p.sum;
+  // Wartość treningu = `cmp` (jak w sygnale; Leg Raise: suma 2 pierwszych serii, CFG.repsCompareFirst).
+  const val = p => rpeMode ? (p.rpe == null ? null : Math.round(p.rpe * 10) / 10) : p.cmp;
   const pts = e.cardProgress.filter(p => val(p) != null);
   const unit = rpeMode ? "" : "powt.", fmt = rpeMode ? v => nf(v, 1) : v => nf(v);
   const card = document.createElement("div");
@@ -2934,7 +2966,10 @@ function repsCard(host, e, M) {
   if (!pts.length) return;
   const series = [{ e, name: e.name, color: css(SERIES_VARS[0]), shape: SHAPES[0], dashed: false,
     points: pts.map(p => ({ d: p.date, v: val(p), note: p.note, title: p.workout.title,
-      rows: tipRow("Serie", p.reps.join(" / ")) + tipRow("Suma powtórzeń", nf(p.sum)) +
+      rows: tipRow("Serie", p.reps.join(" / ")) +
+        (p.first ? tipRow(`Suma ${p.first} pierwszych serii`, nf(p.cmp) + (p.full ? "" : " (niepełny trening)")) +
+          (p.reps.length > p.first ? tipRow("Dalsze serie (informacyjnie)", p.reps.slice(p.first).join(" / ")) : "")
+          : tipRow("Suma powtórzeń", nf(p.sum))) +
         (p.rpe != null ? tipRow("Średnie RPE", nf(p.rpe, 1)) : "") + (p.failure ? tipRow("Do upadku", "tak") : "") })) }];
   lineChart($(".chart", card), { series, markers: markersFor(familyOf(e.name)), unit, fmt, yFixed: rpeMode ? M.yFixed : null, drawKey: "reps:" + e.name });
 }
@@ -2943,7 +2978,8 @@ function renderProgress() {
   const M = METRIC[progressMode];
   $("#progress-sub").textContent = M.sub + " Pionowa przerywana linia z rombem to wpis z decyzje.md (najedź, by zobaczyć treść); linia przerywana serii to okres niepewny." +
     " Kółko wokół punktu = trening z notatką (treść w dymku)." +
-    " Ćwiczenia z masą ciała mają osobną kartę: suma powtórzeń z serii roboczych na trening (w trybie RPE średnie RPE).";
+    " Ćwiczenia z masą ciała mają osobną kartę: suma powtórzeń z serii roboczych na trening (" +
+    Object.entries(CFG.repsCompareFirst).map(([n, k]) => `${n}: z ${k} pierwszych serii, `).join("") + "w trybie RPE średnie RPE).";
   const host = $("#multiples");
   host.innerHTML = "";
   const { fams, hidden } = moveFamilies();
