@@ -1518,6 +1518,7 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-11-12 | Shoulder Press (Machine Plates) | maszyna | Od 12.11 ustawienie przodem do oparcia; wpisy przed 12.11 to inny wariant (klasyczne ustawienie) | Decyzja Jakuba 15.11: ustawienie przodem do oparcia zostaje na stałe; 25 kg to nowy punkt odniesienia, nie podniesienie |
 | 2026-11-12 | * | zasada | Korekta wpisu z 2026-11-12 (gotowość do podniesienia i limit podniesień): poprawny powód to „Decyzja Jakuba 12.11 po analizie logów z 10.11: podniesienia wchodzą coraz ciężej”; treść zasady bez zmian | Poprawka powodu (DB-09); dane w CFG.raiseBothFrom, CFG.raiseGroups i CFG.maxRaisesPerSession bez zmian |
 | 2026-11-15 | * | zasada | Brzuch: unoszenie nóg prostych na poręczach zamiast unoszenia kolan, na stałe w FBW_A i FBW_B; 2 albo 3 serie; ocena = suma powtórzeń z 2 pierwszych serii | Decyzja Jakuba 15–16.11: trudniejsza wersja ćwiczenia zamiast dokładania powtórzeń |
+| 2026-11-18 | * | zasada | Najwyżej 1 podniesienie w każdej grupie (pchanie, ciągnięcie, nogi); bez osobnego limitu 2 na trening | Decyzja Jakuba 18.11: limit miał chronić przed 3 podniesieniami na górę ciała naraz, a przy jednym w grupie na górę wypadają najwyżej 2 |
 </script>
 <script>
 "use strict";
@@ -1556,6 +1557,9 @@ const CFG = {
   // Od tego dnia (data najnowszego ocenianego treningu) warunek raiseMaxLastRpe w OBU z 2 ostatnich czystych treningów (decyzje.md 2026-11-12);
   // wcześniej tylko w najnowszym. Dotyczy „Gotowe do podniesienia” i „Zaległe podniesienie”.
   raiseBothFrom: "2026-11-12",
+  // Od tego dnia (data najnowszego treningu) limit: najwyżej 1 podniesienie w każdej grupie (raiseGroups), bez osobnego limitu na trening
+  // (decyzje.md 2026-11-18); maxRaisesPerSession obowiązuje do tego dnia. Tylko w opisie.
+  raiseLimitPerGroupFrom: "2026-11-18",
   maxRaisesPerSession: 2,  // zasada z decyzje.md (12.11; wcześniej 3 od 16.10): najwyżej tyle podniesień na trening, po jednym z grupy (raiseGroups); tylko w opisie, dashboard niczego nie planuje
   // Grupy podniesień (decyzje.md 2026-11-12): etykieta przy pozycji listy „Gotowe do podniesienia”; dashboard nie wybiera ćwiczeń.
   // Nazwy z Hevy; maszyny wydzielone z notatki (np. „Chest Press (talerze)”) dostają grupę ćwiczenia źródłowego. Hip thrust = CFG.hipThrust.
@@ -2735,8 +2739,11 @@ function renderSignals() {
   // Nad listą limit z decyzje.md (CFG.maxRaisesPerSession); dashboard niczego nie wybiera.
   ready.sort((a, b) => (a.rpe ?? Infinity) - (b.rpe ?? Infinity));
   const maxN = CFG.maxRaisesPerSession, groupNames = Object.keys(CFG.raiseGroups);
+  const perGroup = +MODEL.workouts[MODEL.workouts.length - 1].start >= +isoDay(CFG.raiseLimitPerGroupFrom);
+  const limitNote = perGroup ? `Najwyżej 1 podniesienie w każdej grupie: ${groupNames.join(", ")}` : `Najwyżej ${maxN} ${plPodniesienie(maxN)} na trening, po jednym z grupy: ${groupNames.join(", ")}`;
+  const limitRule = perGroup ? `najwyżej 1 podniesienie w każdej grupie (${groupNames.join(", ")}; od ${fmtDate(isoDay(CFG.raiseLimitPerGroupFrom))}, CFG.raiseLimitPerGroupFrom)` : `najwyżej ${maxN} ${plPodniesienie(maxN)} na trening, po jednym z grupy (${groupNames.join(", ")})`;
   $("#signals-ready").innerHTML = ready.length ? `<div class="info ready" style="margin-bottom:12px"><span class="ic ok">▲</span><div><b>Gotowe do podniesienia</b> (od największego zapasu)` +
-    `<p class="ready-note">Najwyżej ${maxN} ${plPodniesienie(maxN)} na trening, po jednym z grupy: ${esc(groupNames.join(", "))}.</p><ul>` +
+    `<p class="ready-note">${esc(limitNote)}.</p><ul>` +
     ready.map(({ e, s, rpe }) => { const g = raiseGroupOf(e.name);
       return `<li>${esc(`${short(e.name)} (czysto ×${s.streak}, ${rpe != null ? `śr. RPE ${nf(rpe, 1)}` : "bez RPE"})`)}<span class="tag">${esc(g || "bez grupy")}</span></li>`; }).join("") + `</ul></div></div>` : "";
   $("#signals-rules").textContent =`Każdy trening oceniany względem celu obowiązującego w jego dniu. ` +
@@ -2746,7 +2753,7 @@ function renderSignals() {
     `Jedna cięższa seria po pełnych seriach to seria testowa. ` +
     `Cel przekroczony = ostatnia seria o ${CFG.overTargetReps} lub więcej powt. ponad cel. ` +
     `Gotowe do podniesienia = czysto co najmniej ×2 i od ${fmtDate(RAISE_BOTH_FROM)} (CFG.raiseBothFrom) ostatnia seria z RPE najwyżej ${nf(CFG.raiseMaxLastRpe, 1)} w obu z 2 ostatnich czystych treningów, wcześniej tylko w najnowszym; przy wyższym RPE sygnał to „czysto, ale bez zapasu”. ` +
-    `Wg zasady z decyzje.md najwyżej ${maxN} ${plPodniesienie(maxN)} na trening, po jednym z grupy (${groupNames.join(", ")}; CFG.raiseGroups, etykieta przy każdej pozycji); lista nad tabelą jest od największego zapasu, czyli od najniższego średniego RPE wszystkich serii roboczych (bez rozgrzewkowych) ostatniego ocenianego treningu, i jest tylko informacją: wybór należy do Ciebie. ` +
+    `Wg zasady z decyzje.md ${limitRule}; grupy w CFG.raiseGroups, etykieta przy każdej pozycji; lista nad tabelą jest od największego zapasu, czyli od najniższego średniego RPE wszystkich serii roboczych (bez rozgrzewkowych) ostatniego ocenianego treningu, i jest tylko informacją: wybór należy do Ciebie. ` +
     `Zastój = ${CFG.stallSessions} pełne treningi z rzędu na tym samym ciężarze bez czystego wyniku. ` +
     `Budowanie powtórzeń: po podniesieniu (ciężar roboczy wyższy niż w poprzednim pełnym treningu tej maszyny, rozpoznawany z danych, notatka nie jest potrzebna) ` +
     `pierwszy trening na nowym ciężarze poniżej celu i każdy kolejny poniżej celu z większą sumą powtórzeń niż najlepsza dotąd suma na tym ciężarze ` +
@@ -3016,7 +3023,7 @@ const isCycleStart = d => d === PLAN_CHANGES[0] || PLAN_CHANGES.includes(d) && C
 // `names` (karta ćwiczeń z masą ciała): także wpis „zasada” dla * z datą `from` pozycji PLAN jednego z tych ćwiczeń (zmiana ćwiczenia
 // w rutynach, np. Leg Raise zamiast Knee Raise od 15.11).
 const isMoveChange = (d, names) => d.type === "zasada" && PLAN.some(r => r.from && names.includes(r.main) && +isoDay(r.from) === +d.date);
-const markersFor = (fam, names = []) => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) && !isLimitException(d) || isCycleStart(d) || isMoveChange(d, names) : MARK_TYPES.has(d.type) && familyOf(d.ex) === fam).map(d => ({ d: d.date,
+const markersFor = (fam, names = []) => DECISIONS.filter(d => d.ex === "*" ? MARK_TYPES_ALL.has(d.type) && !isLimitException(d) || isCycleStart(d) || isMoveChange(d, names) : MARK_TYPES.has(d.type) && familyOf(d.ex) === fam && (!names.length || names.includes(d.ex))).map(d => ({ d: d.date,
   html: `<div class="t">${esc(fmtDateLong(d.date))}</div><div class="muted" style="margin-bottom:4px">decyzje.md · ${esc(d.ex === "*" ? "cały plan" : d.ex)}</div>` +
     `<div><b>${esc(d.type)}</b>: ${esc(d.change)}</div><div class="n">${esc(d.why)}</div>` }));
 
