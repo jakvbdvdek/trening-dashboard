@@ -115,6 +115,7 @@ section.card { padding: 18px 18px 14px; margin-bottom: 16px; min-width: 0; }
 .legend .sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
 .legend .ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--text-secondary); vertical-align: middle; margin-right: 6px; }
 
+.card-legend { font-size: 13px; gap: 2px 12px; margin: 2px 0 4px; }   /* legenda trybu „Razem” na karcie progresu */
 .multiples { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
 /* Karta wykresu: wykres przypięty do dołu karty, więc w jednym rzędzie wykresy są wyrównane mimo różnej długości legend. */
 .mini { background: var(--surface-2); border-radius: 10px; padding: 12px 12px 6px; min-width: 0; display: flex; flex-direction: column;
@@ -146,6 +147,7 @@ th.sortable button:hover { color: var(--text-primary); }
 th.sortable button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 td.num, th.num { text-align: right; }
 tbody tr:hover td { background: var(--surface-2); }
+.vnote { display: block; font-size: 13px; font-weight: 400; line-height: 1.3; color: var(--text-muted); }   /* dopisek wariantu pod nazwą ćwiczenia w rekordach */
 .tag { display: inline-block; font-size: 13px; color: var(--text-muted); border: 1px solid var(--control-border); border-radius: 999px; padding: 0 7px; margin-left: 6px; }
 .dim { color: var(--text-muted); }
 /* Pierwsza kolumna widoczna przy przewijaniu tabeli w poziomie. */
@@ -445,6 +447,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
           <button type="button" data-mode="kg" aria-pressed="true">Ciężar</button>
           <button type="button" data-mode="e1rm" aria-pressed="false">Szac. 1RM</button>
           <button type="button" data-mode="rpe" aria-pressed="false">RPE</button>
+          <button type="button" data-mode="razem" aria-pressed="false">Razem</button>
         </div>
         <span><span class="ring"></span>trening z notatką</span>
       </div>
@@ -459,16 +462,17 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
       <div class="card-head">
         <div>
           <h2>Treningi w tygodniu</h2>
-          <p>Tygodnie od poniedziałku do niedzieli</p>
+          <p id="weekly-sub">Tygodnie od poniedziałku do niedzieli</p>
         </div>
       </div>
       <div class="chart" id="weekly"></div>
+      <div class="note" id="weekly-note" hidden></div>
     </section>
     <section class="card" id="objetosc">
       <div class="card-head">
         <div>
           <h2>Objętość na trening</h2>
-          <p>Suma ciężar × powtórzenia, bez serii rozgrzewkowych</p>
+          <p id="volume-sub">Suma ciężar × powtórzenia, bez serii rozgrzewkowych</p>
         </div>
       </div>
       <div class="chart" id="volume"></div>
@@ -493,7 +497,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
       <div class="card-head">
         <div>
           <h2>Czas trwania treningu</h2>
-          <p>Minuty od rozpoczęcia do zakończenia</p>
+          <p id="duration-sub">Minuty od rozpoczęcia do zakończenia</p>
         </div>
       </div>
       <div class="chart" id="duration"></div>
@@ -502,7 +506,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
       <div class="card-head">
         <div>
           <h2>Gęstość treningu</h2>
-          <p>Objętość na minutę (kg/min); wyżej = krótsze przerwy albo cięższa praca</p>
+          <p id="density-sub">Objętość na minutę (kg/min); wyżej = krótsze przerwy albo cięższa praca</p>
         </div>
       </div>
       <div class="chart" id="density"></div>
@@ -511,7 +515,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
       <div class="card-head">
         <div>
           <h2>Średnie RPE treningu</h2>
-          <p>RPE wpisywane zachowawczo – liczy się kierunek zmian, nie wartość</p>
+          <p id="rpe-sub">RPE wpisywane zachowawczo – liczy się kierunek zmian, nie wartość</p>
         </div>
       </div>
       <div class="chart" id="rpe-chart"></div>
@@ -522,7 +526,7 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
     <div class="card-head">
       <div>
         <h2>Kalendarz aktywności</h2>
-        <p>Kolor dnia = objętość treningu. Najedź na dzień, żeby zobaczyć szczegóły.</p>
+        <p>Kolor dnia = objętość treningu (bursztyn → jasne złoto). Dni poza oceną progresji (wyjątek w decyzje.md) nie są kolorowane. Najedź na dzień, żeby zobaczyć szczegóły.</p>
       </div>
     </div>
     <div class="cal-row">
@@ -1576,6 +1580,10 @@ const CFG = {
   rareMaxSessions: 2,
   rareStaleDays: 14,
   orderRecent: 6,          // kontrola kolejności: tyle ostatnich treningów (tabela i podsumowanie), bez starszych
+  // Okno wykresów (tylko widok, bez wpływu na oceny): „Treningi w tygodniu” = ostatnie recentWeeks tygodni pn–nd (z bieżącym); wykresy na trening
+  // (objętość, czas trwania, gęstość, średnie RPE) = ostatnie recentWorkouts treningów, linie „średnio” liczone z tych treningów.
+  recentWeeks: 8,
+  recentWorkouts: 14,
   maxPerWeek: 3,           // maks. treningów w tygodniu
   minRestDays: 1,          // minimum dni przerwy między treningami
   // Kontrola maszyny przypisanej domyślnie (brak słowa maszyny w notatce, np. chest press → talerze):
@@ -2040,7 +2048,7 @@ function shapePath(shape, x, y, r) {
 }
 // Mała ikona serii do legendy i dymków: odcinek linii (ciągłej albo przerywanej) z kształtem punktu.
 const seriesIcon = (shape, color, dashed) => `<svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true" style="vertical-align:middle;margin-right:6px">` +
-  `<line x1="1" y1="6" x2="21" y2="6" stroke="${color}" stroke-width="2"${dashed ? ` stroke-dasharray="4 3"` : ""}/>` +
+  `<line x1="1" y1="6" x2="21" y2="6" stroke="${color}" stroke-width="2"${dashed ? ` stroke-dasharray="${dashed === true ? "4 3" : dashed}"` : ""}/>` +
   `<path d="${shapePath(shape, 11, 6, 3.6)}" fill="${color}"/></svg>`;
 // Na ekranach dotykowych dymek zostaje po stuknięciu; znika po stuknięciu poza wykresem / kalendarzem.
 document.addEventListener("pointerdown", e => { if (!e.target.closest || !e.target.closest(".chart svg, .cd, [data-tip]")) hideTip(); });
@@ -2096,12 +2104,15 @@ function countUp(el) {
   step();
 }
 
-function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFixed = null, fmt = v => nf(v, 1), drawKey = null }) {
+// Tryb „Razem” (`combined`): serie z `axis: "r"` leżą na prawej osi (skala `rightFixed`, np. RPE 6–10), pozostałe na lewej; `dash` = własny wzór linii
+// (ciągła / przerywana / kropkowana); punkty z `noTip` nie dodają wpisu do dymku (dymek niesie jedna seria z wszystkimi wartościami).
+function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFixed = null, fmt = v => nf(v, 1), drawKey = null, rightFixed = null, rightFmt = fmt, combined = false }) {
   host.innerHTML = "";
   const W = host.clientWidth, H = height;
-  const m = { l: 38, r: 14, t: 18, b: 24 };
+  const m = { l: 38, r: rightFixed ? 34 : 14, t: 18, b: 24 };
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" }, host);
-  const all = series.flatMap(s => s.points.map(p => p.v));
+  const isR = s => s.axis === "r";
+  const all = series.filter(s => !isR(s)).flatMap(s => s.points.map(p => p.v));
   const dates = [...new Set(series.flatMap(s => s.points.map(p => +p.d)))].sort((a, b) => a - b);
   const lo = Math.min(...all), hi = Math.max(...all), padY = Math.max((hi - lo) * 0.12, 2);
   let ticks;
@@ -2113,11 +2124,21 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
   const t0 = dates[0], t1 = dates[dates.length - 1];
   const X = t => t1 === t0 ? (m.l + W - m.r) / 2 : m.l + ((+t - t0) / (t1 - t0)) * (W - m.l - m.r);
   const Y = v => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
+  // Prawa oś (tylko tryb „Razem”): skala stała, rozszerzona, gdyby wartość wyszła poza nią; bez własnych linii siatki.
+  let rTicks = [], Yr = Y;
+  if (rightFixed) {
+    const rv = series.filter(isR).flatMap(s => s.points.map(p => p.v));
+    for (let v = Math.min(rightFixed[0], Math.floor(Math.min(...rv, rightFixed[0]))); v <= Math.max(rightFixed[1], Math.ceil(Math.max(...rv, rightFixed[1]))); v++) rTicks.push(v);
+    const r0 = rTicks[0], r1 = rTicks[rTicks.length - 1];
+    Yr = v => m.t + (1 - (v - r0) / (r1 - r0)) * (H - m.t - m.b);
+  }
+  const YS = s => isR(s) ? Yr : Y;
 
   for (const t of ticks) {
     svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: t === y0 ? css("--axis") : css("--grid"), "stroke-width": 1 }, svg);
     svgEl("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end", "font-size": 12, fill: css("--text-muted") }, svg).textContent = fmt(t);
   }
+  for (const t of rTicks) svgEl("text", { x: W - m.r + 6, y: Yr(t) + 4, "text-anchor": "start", "font-size": 12, fill: css("--text-muted") }, svg).textContent = rightFmt(t);
   // Środkowa data tylko, gdy nie nachodzi na skrajne.
   const mid = Math.floor((dates.length - 1) / 2);
   const roomy = dates.length > 2 && X(dates[mid]) - X(dates[0]) > 70 && X(dates[dates.length - 1]) - X(dates[mid]) > 70;
@@ -2149,22 +2170,24 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
     // Punkt `off` (np. niepełny trening ćwiczenia z masą ciała) jest poza linią: linia łączy punkty sąsiednie, a sam punkt jest pusty w środku.
     for (const p of s.points) if (p.solo) segs.push([]); else if (!p.off) segs[segs.length - 1].push(p);
     for (const g of segs.filter(g => g.length >= 2)) {
-      const d = g.map((p, i) => `${i ? "L" : "M"}${X(p.d)},${Y(p.v)}`).join("");
-      // Poświata linii: szersza, półprzezroczysta kopia pod linią (bez filtra rozmycia). Linia przerywana (okres niepewny) bez poświaty.
-      if (!s.dashed) svgEl("path", { d, fill: "none", stroke: s.color, "stroke-width": 7, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: 0.35, class: "glow draw" }, svg);
+      const d = g.map((p, i) => `${i ? "L" : "M"}${X(p.d)},${YS(s)(p.v)}`).join("");
+      // Poświata linii: szersza, półprzezroczysta kopia pod linią (bez filtra rozmycia). Linia przerywana (okres niepewny albo `dash`) bez poświaty.
+      const dash = s.dash || (s.dashed ? "6 4" : "");
+      if (!dash) svgEl("path", { d, fill: "none", stroke: s.color, "stroke-width": 7, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: 0.35, class: "glow draw" }, svg);
       svgEl("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round",
-        ...(s.dashed ? { "stroke-dasharray": "6 4" } : { class: "draw" }) }, svg);
+        ...(dash ? { "stroke-dasharray": dash } : { class: "draw" }) }, svg);
     }
   });
   series.forEach(s => s.points.forEach(p => {
-    if (p.note) svgEl("circle", { cx: X(p.d), cy: Y(p.v), r: 8, fill: "none", stroke: css("--text-secondary"), "stroke-width": 1.5 }, svg);
+    if (p.note) svgEl("circle", { cx: X(p.d), cy: YS(s)(p.v), r: 8, fill: "none", stroke: css("--text-secondary"), "stroke-width": 1.5 }, svg);
   }));
   const dots = series.map(s => s.points.map(p =>
-    svgEl("path", { d: shapePath(s.shape || "circle", X(p.d), Y(p.v), 4), ...(p.off ? { fill: surface, stroke: s.color, class: "off" } : { fill: s.color, stroke: surface }), "stroke-width": 2 }, svg)));
+    svgEl("path", { d: shapePath(s.shape || "circle", X(p.d), YS(s)(p.v), 4), ...(p.off ? { fill: surface, stroke: s.color, class: "off" } : { fill: s.color, stroke: surface }), "stroke-width": 2 }, svg)));
 
   // Etykieta przy ostatnim punkcie każdej serii, bez nachodzenia na siebie.
   const placed = [];
   series.forEach(s => {
+    if (isR(s)) return;   // prawa oś (RPE) bez etykiety przy końcu linii; wartość w dymku
     const p = s.points.filter(p => !p.off).pop() || s.points[s.points.length - 1], x = X(p.d), y = Y(p.v) - 10;   // etykieta nie przy punkcie poza linią
     if (placed.some(q => Math.abs(q.x - x) < 60 && Math.abs(q.y - y) < 14)) return;
     placed.push({ x, y });
@@ -2178,7 +2201,7 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
   let active = null;
   const setActive = t => {
     if (t === active) return;
-    series.forEach((s, si) => s.points.forEach((p, pi) => dots[si][pi].setAttribute("d", shapePath(s.shape || "circle", X(p.d), Y(p.v), +p.d === t ? 6 : 4))));
+    series.forEach((s, si) => s.points.forEach((p, pi) => dots[si][pi].setAttribute("d", shapePath(s.shape || "circle", X(p.d), YS(s)(p.v), +p.d === t ? 6 : 4))));
     active = t;
     if (t == null) { cross.setAttribute("visibility", "hidden"); return; }
     cross.setAttribute("x1", X(t)); cross.setAttribute("x2", X(t));
@@ -2191,9 +2214,9 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
     if (mk) { setActive(null); showTip(mk.html, ev); return; }
     const t = dates.reduce((b, d) => Math.abs(X(d) - px) < Math.abs(X(b) - px) ? d : b);
     setActive(t);
-    const hits = series.map(s => ({ s, p: s.points.find(p => +p.d === t) })).filter(x => x.p);
+    const hits = series.map(s => ({ s, p: s.points.find(p => +p.d === t) })).filter(x => x.p && !x.p.noTip);
     showTip(`<div class="t">${esc(fmtDateLong(new Date(t)))}</div><div class="muted" style="margin-bottom:4px">${esc(hits[0].p.title)}</div>` +
-      hits.map(({ s, p }) => (series.length > 1 ? `<div style="margin-top:4px">${seriesIcon(s.shape || "circle", s.color, s.dashed)}<b>${esc(s.name)}</b></div>` : "") + p.rows +
+      hits.map(({ s, p }) => (series.length > 1 && !combined ?`<div style="margin-top:4px">${seriesIcon(s.shape || "circle", s.color, s.dashed)}<b>${esc(s.name)}</b></div>` : "") + p.rows +
         (p.note ? `<div class="n">„${esc(p.note)}”</div>` : "")).join("") +
       // Wpis z decyzje.md z dnia tego treningu.
       marks.filter(x => x.t === t).map(x => `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--grid)">${x.html}</div>`).join(""), ev);
@@ -2234,7 +2257,7 @@ function barChart(host, { labels, values, tips, height = 220, valueLabels = fals
     const h = Y(0) - Y(v);
     const bar = h > 0 ? svgEl("path", { d: barPath(cx - bw / 2, Y(v), bw, h, 4), fill: css("--series-1") }, svg) : null;
     if (valueLabels) svgEl("text", { x: cx, y: Y(v) - 6, "text-anchor": "middle", "font-size": 13, "font-weight": 600, fill: v ? css("--text-primary") : css("--text-muted") }, svg).textContent = fmt(v);
-    if (i % labelEvery === 0) svgEl("text", { x: cx, y: H - 8, "text-anchor": "middle", "font-size": 12, fill: css("--text-muted") }, svg).textContent = labels[i];
+    if ((values.length - 1 - i) % labelEvery === 0) svgEl("text", { x: cx, y: H - 8, "text-anchor": "middle", "font-size": 12, fill: css("--text-muted") }, svg).textContent = labels[i];
     return bar;
   });
   svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: css("--axis"), "stroke-width": 1 }, svg);
@@ -2978,7 +3001,52 @@ const METRIC = {
     val: x => Math.round(x.e1rm * 10) / 10, unit: "kg", fmt: v => nf(v, 1) },
   rpe: { sub: "Średnie RPE serii roboczych (wspólna skala 6–10). Sygnał pomocniczy: główną daną są wykonane powtórzenia.",
     val: x => x.rpe == null ? null : Math.round(x.rpe * 10) / 10, unit: "", fmt: v => nf(v, 1), yFixed: [6, 10] },
+  razem: { sub: "Na jednym wykresie, tylko aktualna maszyna każdego ruchu (bez starych wariantów i zamienników): ciężar najcięższej serii roboczej (linia ciągła) i szacowany 1RM (Epley, linia przerywana) na lewej osi w kg oraz średnie RPE (linia kropkowana) na prawej osi w skali 6–10. Szacowany 1RM jest mniej dokładny powyżej 10 powt. i specyficzny dla maszyny. RPE to sygnał pomocniczy: główną daną są wykonane powtórzenia." },
 };
+const RAZEM_RPE = [6, 10];   // skala prawej osi (RPE) w trybie „Razem”, jak yFixed trybu RPE
+
+// Aktualna maszyna ruchu (tryb „Razem”): maszyna z pozycji PLAN tego ruchu (albo jej wariant wydzielony z notatki, np. Chest Press (talerze)), najpóźniej używana;
+// bez starych wariantów (okres z wpisu „maszyna … inny wariant”), maszyn niepewnych i zamienników (np. Shoulder Press (Machine Plates) przy Seated Shoulder Press).
+// Ruch bez pozycji PLAN: najpóźniej używana maszyna.
+function currentMachine(f) {
+  const lastOf = e => +e.cardProgress[e.cardProgress.length - 1].date;
+  const slot = PLAN.find(r => !r.byName && familyOf(r.main) === f.name);
+  const cands = f.list.filter(e => !variantPeriod(e.name) && !e.uncertain && e.cardProgress.length);
+  const own = slot ? cands.filter(e => e.name === slot.main || sourceOf(e.name) === slot.main) : [];
+  const pool = own.length ? own : cands;
+  return pool.length ? pool.reduce((b, e) => lastOf(e) > lastOf(b) ? e : b) : null;
+}
+
+// Karta ruchu w trybie „Razem”: jedna maszyna, trzy miary na jednym wykresie (ciężar, szac. 1RM: lewa oś kg; RPE: prawa oś 6–10).
+function togetherCard(host, f) {
+  const e = currentMachine(f);
+  if (!e) return false;
+  const c1 = css("--series-1"), c2 = css("--series-2"), c3 = css("--series-3");
+  const pts = e.cardProgress;
+  const e1 = x => Math.round(x.e1rm * 10) / 10, rp = x => x.rpe == null ? null : Math.round(x.rpe * 10) / 10;
+  const common = x => ({ d: x.date, note: x.note, title: x.workout.title, solo: x.solo });
+  const series = [
+    { name: "Ciężar", color: c1, shape: SHAPES[0], axis: "l", dash: "",
+      points: pts.map(x => ({ ...common(x), v: x.kg,
+        rows: tipRow("Ciężar (najcięższa seria)", `${nf(x.kg, 1)} kg × ${nf(x.reps)}`, c1) + tipRow("Szac. 1RM", kg(e1(x)), c2) +
+          (rp(x) != null ? tipRow("Średnie RPE", nf(rp(x), 1), c3) : "") + tipRow("Serie robocze", nf(x.sets)) })) },
+    { name: "Szac. 1RM", color: c2, shape: SHAPES[1], axis: "l", dash: "6 4", points: pts.map(x => ({ ...common(x), v: e1(x), noTip: true })) },
+    { name: "RPE", color: c3, shape: SHAPES[2], axis: "r", dash: "1.5 4", points: pts.filter(x => rp(x) != null).map(x => ({ ...common(x), v: rp(x), noTip: true })) },
+  ];
+  const kgPts = series[0].points, a = kgPts[0].v, b = kgPts[kgPts.length - 1].v, d = b - a;
+  const range = kgPts.length > 1 ? `${nf(a, 1)} → ${nf(b, 1)} kg` : `${nf(a, 1)} kg`;
+  const delta = kgPts.length < 2 ? "" : d > 0 ? `<span class="delta-up">▲ ${esc(nf(d, 1))} kg</span>` : d < 0 ? `<span>▼ ${esc(nf(-d, 1))} kg</span>` : `<span>bez zmian</span>`;
+  const card = document.createElement("div");
+  card.className = "mini";
+  const legend = [[SHAPES[0], c1, false, "Ciężar (lewa oś, kg)"], [SHAPES[1], c2, "6 4", "Szac. 1RM (lewa oś, kg)"], [SHAPES[2], c3, "1.5 4", "RPE (prawa oś, 6–10)"]]
+    .map(([sh, col, dash, txt]) => `<span>${seriesIcon(sh, col, dash)}${txt}</span>`).join("");
+  card.innerHTML = `<h3>${esc(FAMILIES.some(([n]) => n === f.name) ? f.name : e.name)}</h3>` +
+    `<div class="meta"><span>${esc(e.name)} · ${kgPts.length} ${plTrening(kgPts.length)} · ${esc(range)}</span>${delta}</div>` +
+    `<div class="legend card-legend">${legend}</div><div class="chart"></div>`;
+  host.appendChild(card);
+  lineChart($(".chart", card), { series, markers: markersFor(f.name), unit: "kg", fmt: v => nf(v, 1), rightFixed: RAZEM_RPE, rightFmt: v => nf(v), combined: true, drawKey: "razem:" + f.name });
+  return true;
+}
 
 // Karty progresu pokazują tylko aktywne linie: bez treningów z dni-wyjątków (wpis „wyjatek” dla *), bez maszyn z zamkniętym
 // okresem (wpis „maszyna … przed …”) i bez maszyn nieużywanych od ponad CFG.signalsActiveDays dni (licząc od najnowszego
@@ -3032,8 +3100,9 @@ const markersFor = (fam, names = []) => DECISIONS.filter(d => d.ex === "*" ? MAR
 // i kształtem punktu; serie nie są ze sobą połączone, bo ich wartości liczy się inaczej).
 function repsCard(host, g, M) {
   const rpeMode = progressMode === "rpe";
-  // Wartość treningu = `cmp` (jak w sygnale; Leg Raise: suma 2 pierwszych serii, CFG.repsCompareFirst).
-  const val = p => rpeMode ? (p.rpe == null ? null : Math.round(p.rpe * 10) / 10) : p.cmp;
+  // Wartość punktu = suma powtórzeń WSZYSTKICH serii (`sum`), także dla Leg Raise. Sygnał w tabeli dalej porównuje N pierwszych serii
+  // (`cmp`, CFG.repsCompareFirst), więc punkt i sygnał mogą się różnić; pusty punkt (niepełny trening) zostaje.
+  const val = p => rpeMode ? (p.rpe == null ? null : Math.round(p.rpe * 10) / 10) : p.sum;
   const unit = rpeMode ? "" : "powt.", fmt = rpeMode ? v => nf(v, 1) : v => nf(v);
   const u = unit ? " " + unit : "";
   // Kolor i kształt według pozycji ćwiczenia na liście karty (stałe, także gdy inna seria nie ma danych dla miary).
@@ -3043,9 +3112,8 @@ function repsCard(host, g, M) {
     points: e.cardProgress.filter(p => val(p) != null).map(p => ({ d: p.date, v: val(p), note: p.note, title: p.workout.title, off: !rpeMode && !p.full,
       rows: (p.full ? "" : tipRow("Niepełny trening", `${p.reps.length} z ${p.first} ocenianych serii${rpeMode ? "" : ", poza linią"}`)) +
         tipRow("Serie", p.reps.join(" / ")) +
-        (p.first ? tipRow(`Suma ${p.first} pierwszych serii`, p.full ? nf(p.cmp) : `${nf(p.cmp)} (bez porównania)`) +
-          (p.reps.length > p.first ? tipRow("Dalsze serie (informacyjnie)", p.reps.slice(p.first).join(" / ")) : "")
-          : tipRow("Suma powtórzeń", nf(p.sum))) +
+        tipRow("Suma powtórzeń (wszystkie serie)", nf(p.sum)) +
+        (p.first ? tipRow(`Do sygnału: suma ${p.first} pierwszych serii`, p.full ? nf(p.cmp) : `${nf(p.cmp)} (bez porównania)`) : "") +
         (p.rpe != null ? tipRow("Średnie RPE", nf(p.rpe, 1)) : "") + (p.failure ? tipRow("Do upadku", "tak") : "") })) })).filter(s => s.points.length);
   const line = s => {
     // Zakres i zmiana z treningów pełnych (bez punktów poza linią); liczba treningów ze wszystkich.
@@ -3058,7 +3126,7 @@ function repsCard(host, g, M) {
     return { n: s.points.length, range, delta };
   };
   // Co liczy seria (legenda wspólnej karty): suma wszystkich serii albo N pierwszych (CFG.repsCompareFirst).
-  const basis = e => rpeMode ? "" : CFG.repsCompareFirst[e.name] ? ` · suma ${CFG.repsCompareFirst[e.name]} pierwszych serii` : " · suma serii";
+  const basis = e => rpeMode ? "" : " · suma wszystkich serii";
   let meta = `<div class="meta"><span>Za mało danych dla tej miary</span></div>`;
   if (series.length === 1) {
     const l = line(series[0]);
@@ -3081,9 +3149,8 @@ function renderProgress() {
   const M = METRIC[progressMode];
   $("#progress-sub").textContent = M.sub + " Pionowa przerywana linia z rombem to wpis z decyzje.md (najedź, by zobaczyć treść); linia przerywana serii to okres niepewny." +
     " Kółko wokół punktu = trening z notatką (treść w dymku)." +
-    " Ćwiczenia z masą ciała mają osobną kartę (unoszenie kolan i nóg na poręczach wspólną, każde ćwiczenie z własną linią): suma powtórzeń z serii roboczych na trening (" +
-    Object.entries(CFG.repsCompareFirst).map(([n, k]) => `${n}: z ${k} pierwszych serii, `).join("") + "w trybie RPE średnie RPE)." +
-    (Object.keys(CFG.repsCompareFirst).length ? " Pusty punkt poza linią = niepełny trening (mniej serii niż ocenianych), bez porównania." : "");
+    " Ćwiczenia z masą ciała mają osobną kartę (unoszenie kolan i nóg na poręczach wspólną, każde ćwiczenie z własną linią): suma powtórzeń ze WSZYSTKICH serii roboczych na trening, w trybie RPE średnie RPE." +
+    (Object.keys(CFG.repsCompareFirst).length ? ` Sygnał w tabeli porównuje tylko ${Object.entries(CFG.repsCompareFirst).map(([n, k]) => `${k} pierwsze serie (${n})`).join(", ")}, więc może różnić się od wykresu. Pusty punkt poza linią = niepełny trening (mniej serii niż ocenianych w sygnale), bez porównania.` : "");
   const host = $("#multiples");
   host.innerHTML = "";
   const { fams, hidden } = moveFamilies();
@@ -3101,8 +3168,12 @@ function renderProgress() {
     }).filter(g => sum(g.list, e => e.cardProgress.length) >= 2);
   const cards = [...fams.filter(f => f.sessions >= 2).map(f => ({ f, n: f.sessions })), ...repsCards.map(g => ({ e: g, n: sum(g.list, e => e.cardProgress.length) }))]
     .sort((a, b) => b.n - a.n);
+  let skippedReps = false;
   for (const { f, e } of cards) {
+    // Tryb „Razem”: karty ćwiczeń z masą ciała pomijam (brak ciężaru i 1RM, wartością są powtórzenia), karty ruchów z maszyną: jedna aktualna maszyna.
+    if (e && progressMode === "razem") { skippedReps = true; continue; }
     if (e) { repsCard(host, e, M); continue; }
+    if (progressMode === "razem" && togetherCard(host, f)) continue;
     const series = f.list.slice(0, SERIES_VARS.length).map((e, i) => ({
       e, name: e.name, color: css(SERIES_VARS[i]), shape: SHAPES[i], dashed: e.uncertain,
       points: e.cardProgress.filter(x => M.val(x) != null).map(x => ({
@@ -3146,6 +3217,7 @@ function renderProgress() {
   const groups = new Map();
   for (const h of hidden) { if (!groups.has(h.why)) groups.set(h.why, []); groups.get(h.why).push(h.name); }
   $("#only-once").textContent = [
+    skippedReps ? "W trybie Razem nie ma karty ćwiczeń z masą ciała (unoszenie kolan i nóg): nie mają ciężaru ani szacowanego 1RM; są w trybach Ciężar i RPE." : "",
     once.length ? `Ruchy zrobione tylko raz, więc bez wykresu (są w tabeli rekordów): ${once.join(", ")}.` : "",
     hidden.length ? `Poza kartami (są w tabeli rekordów): ${[...groups].map(([why, names]) => `${why}: ${names.join(", ")}`).join("; ")}.` : "",
   ].filter(Boolean).join(" ");
@@ -3181,6 +3253,9 @@ const muscleOf = name => (MUSCLE_RULES.find(([re]) => re.test(name)) || [null, "
 const RAMP = ["#3f80da", "#5b95e3", "#80aeec", "#a8c8f3", "#d0e2fa"];
 const rampIdx = (v, max) => v <= 0 ? -1 : Math.min(4, Math.floor((v / max) * 5 - 1e-9));
 const rampInk = () => "#0d0d0d";
+// Skala kalendarza aktywności (tylko kalendarz; tabela serii zostaje przy RAMP): bursztyn → jasne złoto, bez pomarańczu i czerwieni (to kolory ostrzeżeń).
+// Każdy kolor ≥ 3:1 względem karty, ciemny numer dnia ≥ 4.5:1 na każdym (testy/kontrast.js).
+const CAL_RAMP = ["#a37a12", "#c39a21", "#dcb43f", "#efcd68", "#fae6a0"];
 // Szerokości kolumn mapy cieplnej serii (px): etykieta grupy, minimum tygodnia (reszta szerokości po równo), tydzień bez treningów.
 const HEAT_COL = { label: 132, week: 48, empty: 26 };
 
@@ -3262,7 +3337,9 @@ function renderMuscles() {
 
 // ---------- Czas i gęstość ----------
 function renderTempo() {
-  const ws = MODEL.workouts.filter(w => w.minutes);
+  const ws = MODEL.workouts.filter(w => w.minutes).slice(-CFG.recentWorkouts);
+  $("#duration-sub").textContent = `Minuty od rozpoczęcia do zakończenia; ostatnie ${CFG.recentWorkouts} treningów`;
+  $("#density-sub").textContent = `Objętość na minutę (kg/min); wyżej = krótsze przerwy albo cięższa praca; ostatnie ${CFG.recentWorkouts} treningów`;
   if (!ws.length) { $("#duration").textContent = $("#density").textContent = "Brak danych o czasie treningów."; return; }
   const wTip = (w, main) => `<div class="t">${esc(w.title)}</div>
     <div class="muted" style="margin-bottom:4px">${esc(fmtDateLong(w.start))}, ${esc(fmtTime(w.start))}</div>
@@ -3294,7 +3371,8 @@ function rpeWorkouts() {
   }).filter(Boolean);
 }
 function renderRpe() {
-  const host = $("#rpe-chart"), items = rpeWorkouts();
+  const host = $("#rpe-chart"), all = rpeWorkouts(), items = all.slice(-CFG.recentWorkouts);
+  $("#rpe-sub").textContent = `RPE wpisywane zachowawczo – liczy się kierunek zmian, nie wartość; ostatnie ${CFG.recentWorkouts} treningów`;
   if (!items.length) { host.textContent = "Brak treningów z wpisanym RPE."; return; }
   const markers = DECISIONS.filter(isCycleStart).map(d => ({
     d: d.date,
@@ -3304,7 +3382,8 @@ function renderRpe() {
   barChart(host, {
     labels: items.map(x => fmtDate(x.w.start)), values: items.map(x => +x.rpe.toFixed(2)),
     fmt: v => nf(v, 1), axisFmt: v => nf(v, 1), height: 200, yMax: 10,
-    markers: markers.map(m => ({ i: items.findIndex(x => dayDiff(m.d, x.w.start) >= 0), html: m.html })).filter(m => m.i >= 0),
+    // Znaczniki sprzed okna (wcześniej niż pierwszy pokazany trening) pomijam.
+    markers: markers.map(m => ({ i: all.findIndex(x => dayDiff(m.d, x.w.start) >= 0) - (all.length - items.length), html: m.html })).filter(m => m.i >= 0),
     tips: items.map(({ w, n, rpe }) => {
       const r = routineOf(w);
       return `<div class="t">${esc(w.title)}</div>
@@ -3332,7 +3411,10 @@ function renderCalendar() {
   const end = sinceLast > 0 && sinceLast <= 56 ? today : lastDay;
   const start = weekStart(ws[0].start);
   const nW = dayDiff(start, weekStart(end)) / 7 + 1;
-  const maxVol = Math.max(...[...byDay.values()].map(a => sum(a, w => w.volume)), 1);
+  // Dni-wyjątki od oceny progresji (decyzje.md, np. luźny trening na hantlach 26.09) nie kolorują mapy: dzień wygląda jak dzień bez treningu.
+  // Statystyki obok mapy liczą wszystkie treningi; dymek dnia pokazuje trening z dopiskiem.
+  const shownOf = items => items.filter(w => !isExcluded(w.start));
+  const maxVol = Math.max(...[...byDay.values()].map(a => sum(shownOf(a), w => w.volume)), 1);
 
   const cal = $("#calendar");
   cal.style.gridTemplateColumns = `24px repeat(${nW}, 26px)`;
@@ -3348,13 +3430,13 @@ function renderCalendar() {
       const d = addDays(start, i * 7 + r);
       const items = byDay.get(key(d)) || [];
       if (d > end) { html += `<div class="cd future"></div>`; continue; }
-      const vol = sum(items, w => w.volume);
-      const k = items.length ? Math.max(0, rampIdx(vol, maxVol)) : -1;
-      const style = k >= 0 ? ` style="background:${RAMP[k]};color:${rampInk(k)}"` : "";
-      cells.push({ d, items, vol });
+      const shown = shownOf(items), vol = sum(shown, w => w.volume);
+      const k = shown.length ? Math.max(0, rampIdx(vol, maxVol)) : -1;
+      const style = k >= 0 ? ` style="background:${CAL_RAMP[k]};color:${rampInk(k)}"` : "";
+      cells.push({ d, items, vol, plain: !shown.length });
       // Etykieta tekstowa (nie tylko kolor): data i objętość dnia.
-      const label = `${fmtDateLong(d)}: ${items.length ? `${items.length === 1 ? "trening" : items.length + " treningi"}, objętość ${kg(Math.round(vol))}` : "bez treningu"}`;
-      html += `<div class="cd${items.length ? " w" : ""}" data-i="${cells.length - 1}" role="img" aria-label="${esc(label)}"${style}>${d.getDate()}</div>`;
+      const label = `${fmtDateLong(d)}: ${items.length ? `${items.length === 1 ? "trening" : items.length + " treningi"}, objętość ${kg(Math.round(sum(items, w => w.volume)))}${shown.length ? "" : ", poza oceną progresji"}` : "bez treningu"}`;
+      html += `<div class="cd${shown.length ? " w" : ""}" data-i="${cells.length - 1}" role="img" aria-label="${esc(label)}"${style}>${d.getDate()}</div>`;
     }
   }
   cal.innerHTML = html;
@@ -3364,12 +3446,12 @@ function renderCalendar() {
       ? c.items.map(w => `<div class="muted" style="margin-top:4px">${esc(w.title)} · ${esc(fmtTime(w.start))}</div>
           ${tipRow("Objętość", kg(Math.round(w.volume)))}${w.minutes ? tipRow("Czas", fmtDur(w.minutes)) : ""}
           <div class="muted" style="white-space:normal">${esc([...new Set(w.sets.map(s => s.ex))].join(", "))}</div>`).join("")
-      : `<div class="muted">Dzień bez treningu</div>`), ev);
+      : `<div class="muted">Dzień bez treningu</div>`) + (c.items.length && c.plain ? `<div class="muted" style="margin-top:4px">Dzień poza oceną progresji (decyzje.md): bez koloru na mapie</div>` : ""), ev);
     el.addEventListener("pointermove", onPoint);
     el.addEventListener("pointerdown", onPoint);   // stuknięcie na ekranie dotykowym
     el.addEventListener("pointerleave", ev => { if (ev.pointerType === "mouse") hideTip(); });
   });
-  $("#cal-legend").innerHTML = `<i style="background:var(--surface-2)"></i>&nbsp;brak&nbsp;&nbsp; mniej ${RAMP.map(c => `<i style="background:${c}"></i>`).join("")} więcej objętości`;
+  $("#cal-legend").innerHTML = `<i style="background:var(--surface-2)"></i>&nbsp;brak&nbsp;&nbsp; mniej ${CAL_RAMP.map(c => `<i style="background:${c}"></i>`).join("")} więcej objętości`;
 
   // Statystyki
   const days = [...new Set(ws.map(w => +midnight(w.start)))].map(t => new Date(t));
@@ -3400,20 +3482,34 @@ function renderCalendar() {
     `<div class="stat"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="note">${esc(n)}</div></div>`).join("");
 }
 
+// Ostatnie CFG.recentWeeks tygodni pn–nd łącznie z bieżącym (tydzień z dzisiejszym dniem, jeśli ostatni trening był nie dalej niż 56 dni temu, jak w kalendarzu).
+function recentWeeks() {
+  const ws = MODEL.workouts, last = ws[ws.length - 1].start, today = new Date();
+  const ref = today > last && dayDiff(last, today) <= 56 ? today : last, endW = weekStart(ref);
+  return Array.from({ length: CFG.recentWeeks }, (_, i) => {
+    const start = addDays(endW, -7 * (CFG.recentWeeks - 1 - i));
+    return { start, end: addDays(start, 6), items: ws.filter(x => weekStart(x.start).getTime() === start.getTime()) };
+  });
+}
 function renderWeekly() {
-  const wk = weeks(MODEL.workouts);
+  const wk = recentWeeks();
   const today = new Date();
+  const isCur = w => today >= w.start && today < new Date(w.end.getFullYear(), w.end.getMonth(), w.end.getDate() + 1);
+  const cur = wk.findIndex(isCur);
+  $("#weekly-sub").textContent = `Tygodnie od poniedziałku do niedzieli, ostatnie ${CFG.recentWeeks}`;
+  $("#weekly-note").textContent = cur < 0 ? "" : `* tydzień w toku (do ${fmtDate(wk[cur].end)}), liczba treningów jeszcze może wzrosnąć`;
+  $("#weekly-note").hidden = cur < 0;
   barChart($("#weekly"), {
-    labels: wk.map(w => fmtDate(w.start)),
+    labels: wk.map((w, i) => fmtDate(w.start) + (i === cur ? "*" : "")),
     values: wk.map(w => w.items.length),
     valueLabels: true, axis: false, height: 220,
     refs: [{ v: CFG.maxPerWeek, label: `maks. ${CFG.maxPerWeek}` }],
     tips: wk.map(w => {
       const range = w.start.getMonth() === w.end.getMonth() ? `${w.start.getDate()}–${fmtDate(w.end)}` : `${fmtDate(w.start)} – ${fmtDate(w.end)}`;
-      const ongoing = today >= w.start && today < new Date(w.end.getFullYear(), w.end.getMonth(), w.end.getDate() + 1);
+      const ongoing = isCur(w);
       // Okres wyjątku od limitu (decyzje.md): bez ostrzeżeń o limicie i o dniach z rzędu.
       const b2b = w.items.slice(1).filter((x, i) => dayDiff(w.items[i].start, x.start) - 1 < CFG.minRestDays && !limitFree(w.items[i].start, x.start)).length;
-      return `<div class="t">Tydzień ${esc(range)}${ongoing ? " <span class='muted'>(w trakcie)</span>" : ""}</div>
+      return `<div class="t">Tydzień ${esc(range)}${ongoing ? " <span class='muted'>(w toku)</span>" : ""}</div>
         ${tipRow("Treningi", nf(w.items.length))}
         ${w.items.length > CFG.maxPerWeek && !limitFreeWeek(w) ? `<div class="n" style="color:var(--warning);font-style:normal">⚠ powyżej założonych ${CFG.maxPerWeek} treningów</div>` : ""}
         ${b2b ? `<div class="n" style="color:var(--warning);font-style:normal">⚠ trening dzień po dniu (bez dnia przerwy)</div>` : ""}
@@ -3424,7 +3520,8 @@ function renderWeekly() {
 }
 
 function renderVolume() {
-  const ws = MODEL.workouts;
+  const ws = MODEL.workouts.slice(-CFG.recentWorkouts);
+  $("#volume-sub").textContent = `Suma ciężar × powtórzenia, bez serii rozgrzewkowych; ostatnie ${CFG.recentWorkouts} treningów`;
   barChart($("#volume"), {
     labels: ws.map(w => fmtDate(w.start)),
     values: ws.map(w => Math.round(w.volume)),
@@ -3456,7 +3553,12 @@ function cell(e, key) {
   const dash = `<span class="dim">—</span>`;
   switch (key) {
     case "fam": return familyOf(e.name) === e.name ? `<span class="dim">—</span>` : esc(familyOf(e.name));
-    case "name": return esc(e.name) + (e.kind === "reps" ? `<span class="tag">masa ciała</span>` : e.kind === "cardio" ? `<span class="tag">cardio</span>` : "");
+    case "name": {
+      // Dopisek wariantu (stary wariant „… – klasyczne ustawienie (do 11.11)” albo zamknięty okres maszyny „… (multi press, do 28.09)”) w nowej linii pod nazwą, mniejszą czcionką.
+      const m = e.name.match(/^(.*?) – (.+)$/) || e.name.match(/^(.*?) \(([^()]*, do \S+)\)$/);
+      return esc(m ? m[1] : e.name) + (e.kind === "reps" ? `<span class="tag">masa ciała</span>` : e.kind === "cardio" ? `<span class="tag">cardio</span>` : "") +
+        (m ? `<span class="vnote">${esc(m[2])}</span>` : "");
+    }
     case "sessions": return nf(e.sessions);
     case "max": return e.kind === "weight" ? `<b>${esc(kg(e.maxSet.kg))}</b> <span class="dim">× ${nf(e.maxSet.reps)}</span>` : dash;
     case "maxDate": return e.kind === "weight" ? esc(fmtDate(e.maxSet.workout.start)) : dash;
