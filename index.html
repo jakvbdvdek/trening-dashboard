@@ -115,7 +115,33 @@ section.card { padding: 18px 18px 14px; margin-bottom: 16px; min-width: 0; }
 .legend .sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
 .legend .ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--text-secondary); vertical-align: middle; margin-right: 6px; }
 
-.card-legend { font-size: 13px; gap: 2px 12px; margin: 2px 0 4px; }   /* legenda trybu „Razem” na karcie progresu */
+/* Analiza ćwiczenia: panel na pełną szerokość (telefon: pełny ekran), pod dymkiem (#tip z-index 10) i nad menu (5). Kolory z tokenów. */
+.mini.clickable { cursor: pointer; }
+.mini .an-open { margin-top: 8px; width: 100%; justify-content: center; }
+.an { position: fixed; inset: 0; z-index: 8; background: rgba(4,8,20,0.78); overflow-y: auto; overscroll-behavior: contain; }
+.an[hidden] { display: none; }
+.an-panel { max-width: 1200px; margin: 16px auto; min-height: calc(100% - 32px); padding: 16px 20px 28px; background: var(--surface); border: 1px solid var(--control-border); border-radius: 14px; }
+@media (max-width: 1232px) { .an-panel { margin: 16px; } }
+@media (max-width: 700px) { .an-panel { margin: 0; min-height: 100%; border: 0; border-radius: 0; padding: 12px 12px 28px; } }
+.an-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.an-head h2 { font-size: 20px; }
+.an-head h2:focus, .an-head h2:focus-visible { outline: none; box-shadow: none; }
+.an-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; margin-bottom: 8px; }
+.an-field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--text-secondary); min-width: min(100%, 260px); }
+.an-field select { min-height: 44px; background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--control-border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 16px; }
+.an-group { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; align-items: center; }
+fieldset.an-group, div.an-group { min-width: 0; }
+.an-group legend, .an-label { flex-basis: 100%; font-size: 14px; color: var(--text-secondary); padding: 0; margin-bottom: 0; }
+.an-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 12px; background: var(--surface-2); border: 1px solid var(--control-border); border-radius: 8px; color: var(--text-primary); font-size: 15px; cursor: pointer; }
+.an-chip input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+.an-chip:has(input:checked) { border-color: var(--accent); }
+.an-chip:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.an-chip.dis { color: var(--text-muted); cursor: default; }
+.an-meta { margin: 8px 0 6px; font-size: 16px; font-weight: 600; }
+.an-h3 { font-size: 15px; font-weight: 600; margin: 14px 0 0; }
+#an .chart { margin-top: 8px; }
+#an-range { flex-wrap: wrap; }
+#an-range button { flex: 1 1 auto; }
 .multiples { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
 /* Karta wykresu: wykres przypięty do dołu karty, więc w jednym rzędzie wykresy są wyrównane mimo różnej długości legend. */
 .mini { background: var(--surface-2); border-radius: 10px; padding: 12px 12px 6px; min-width: 0; display: flex; flex-direction: column;
@@ -447,7 +473,6 @@ nav.jump a[aria-current="true"] { background: var(--accent); color: var(--accent
           <button type="button" data-mode="kg" aria-pressed="true">Ciężar</button>
           <button type="button" data-mode="e1rm" aria-pressed="false">Szac. 1RM</button>
           <button type="button" data-mode="rpe" aria-pressed="false">RPE</button>
-          <button type="button" data-mode="razem" aria-pressed="false">Razem</button>
         </div>
         <span><span class="ring"></span>trening z notatką</span>
       </div>
@@ -1524,6 +1549,37 @@ Dziennik świadomych decyzji, których nie da się wyczytać z eksportu Hevy (`d
 | 2026-11-15 | * | zasada | Brzuch: unoszenie nóg prostych na poręczach zamiast unoszenia kolan, na stałe w FBW_A i FBW_B; 2 albo 3 serie; ocena = suma powtórzeń z 2 pierwszych serii | Decyzja Jakuba 15–16.11: trudniejsza wersja ćwiczenia zamiast dokładania powtórzeń |
 | 2026-11-18 | * | zasada | Najwyżej 1 podniesienie w każdej grupie (pchanie, ciągnięcie, nogi); bez osobnego limitu 2 na trening | Decyzja Jakuba 18.11: limit miał chronić przed 3 podniesieniami na górę ciała naraz, a przy jednym w grupie na górę wypadają najwyżej 2 |
 </script>
+<div class="an" id="an" role="dialog" aria-modal="true" aria-labelledby="an-title" hidden>
+  <div class="an-panel">
+    <div class="an-head">
+      <h2 id="an-title" tabindex="-1">Analiza ćwiczenia</h2>
+      <button type="button" class="btn" id="an-close">Zamknij</button>
+    </div>
+    <div class="an-controls">
+      <label class="an-field"><span>Ćwiczenie</span><select id="an-ex"></select></label>
+      <fieldset class="an-group"><legend>Miary na wykresie</legend>
+        <label class="an-chip"><input type="checkbox" id="an-m-kg">Ciężar</label>
+        <label class="an-chip"><input type="checkbox" id="an-m-e1rm">Szac. 1RM</label>
+        <label class="an-chip"><input type="checkbox" id="an-m-rpe">RPE</label>
+        <label class="an-chip"><input type="checkbox" id="an-m-reps">Suma powtórzeń</label>
+      </fieldset>
+      <div class="an-group"><span class="an-label" id="an-range-l">Zakres czasu</span>
+        <div class="seg" id="an-range" role="group" aria-labelledby="an-range-l">
+          <button type="button" data-range="cycle" aria-pressed="true">Bieżący cykl</button>
+          <button type="button" data-range="last" aria-pressed="false">Ostatnie 14 treningów</button>
+          <button type="button" data-range="all" aria-pressed="false">Całość</button>
+        </div>
+      </div>
+      <label class="an-chip an-old"><input type="checkbox" id="an-old">Pokaż starsze maszyny</label>
+    </div>
+    <p class="sub small" id="an-range-note"></p>
+    <p class="an-meta" id="an-meta"></p>
+    <div class="legend" id="an-legend"></div>
+    <div class="chart" id="an-chart"></div>
+    <div id="an-reps-wrap" hidden><h3 class="an-h3">Suma powtórzeń na trening <span class="muted">(osobna skala, bo ma inną jednostkę niż kg)</span></h3><div class="chart" id="an-reps"></div></div>
+    <p class="note" id="an-note"></p>
+  </div>
+</div>
 <script>
 "use strict";
 
@@ -1970,6 +2026,7 @@ function analyzeExercise(e) {
       return {
         workout: w, date: w.start, kg: top.kg, reps: top.reps, bestSet,
         e1rm: e1rm(bestSet), volume: sum(sets, s => s.kg * s.reps), sets: sets.length,
+        sum: sum(sets, s => s.reps), setsTxt: sets.map(s => `${nf(s.kg, 1)} × ${s.reps}`).join(" / "),   // do widoku „Analiza ćwiczenia”
         rpe: mean(sets.filter(s => s.rpe != null).map(s => s.rpe)),
         // Trening z oboma słowami maszyny nie dostaje kółka „z notatką”: pełna notatka jest w ostrzeżeniu nad sygnałami.
         note: sets.some(s => s.solo) ? "" : noteContent((e.sets.find(s => s.workout === w && s.note) || {}).note || "", e.sets.find(s => s.workout === w).source, e.name),
@@ -2104,7 +2161,7 @@ function countUp(el) {
   step();
 }
 
-// Tryb „Razem” (`combined`): serie z `axis: "r"` leżą na prawej osi (skala `rightFixed`, np. RPE 6–10), pozostałe na lewej; `dash` = własny wzór linii
+// Widok analizy (`combined`): serie z `axis: "r"` leżą na prawej osi (skala `rightFixed`, np. RPE 6–10), pozostałe na lewej; `dash` = własny wzór linii
 // (ciągła / przerywana / kropkowana); punkty z `noTip` nie dodają wpisu do dymku (dymek niesie jedna seria z wszystkimi wartościami).
 function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFixed = null, fmt = v => nf(v, 1), drawKey = null, rightFixed = null, rightFmt = fmt, combined = false }) {
   host.innerHTML = "";
@@ -2124,7 +2181,7 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
   const t0 = dates[0], t1 = dates[dates.length - 1];
   const X = t => t1 === t0 ? (m.l + W - m.r) / 2 : m.l + ((+t - t0) / (t1 - t0)) * (W - m.l - m.r);
   const Y = v => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
-  // Prawa oś (tylko tryb „Razem”): skala stała, rozszerzona, gdyby wartość wyszła poza nią; bez własnych linii siatki.
+  // Prawa oś (tylko widok analizy): skala stała, rozszerzona, gdyby wartość wyszła poza nią; bez własnych linii siatki.
   let rTicks = [], Yr = Y;
   if (rightFixed) {
     const rv = series.filter(isR).flatMap(s => s.points.map(p => p.v));
@@ -2163,7 +2220,7 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
     svgEl("path", { d: `M${x},${m.t - 12}l4,4l-4,4l-4,-4Z`, fill: ink }, svg);
   }
 
-  const surface = getComputedStyle(host.closest(".mini, section")).backgroundColor;
+  const surface = getComputedStyle(host.closest(".mini, section, .an-panel")).backgroundColor;
   // Linia łączy kolejne punkty serii; punkt `solo` (np. trening niepewny z oboma słowami w notatce) zostaje bez połączeń.
   series.forEach(s => {
     const segs = [[]];
@@ -2214,7 +2271,9 @@ function lineChart(host, { series, markers = [], height = 170, unit = "kg", yFix
     if (mk) { setActive(null); showTip(mk.html, ev); return; }
     const t = dates.reduce((b, d) => Math.abs(X(d) - px) < Math.abs(X(b) - px) ? d : b);
     setActive(t);
-    const hits = series.map(s => ({ s, p: s.points.find(p => +p.d === t) })).filter(x => x.p && !x.p.noTip);
+    // `grp` (widok analizy): punkty tej samej maszyny w tej dacie dają jeden wpis w dymku (miary jednej maszyny mają te same wiersze).
+    const hits = series.map(s => ({ s, p: s.points.find(p => +p.d === t) })).filter(x => x.p && !x.p.noTip).filter((x, i, a) => !x.p.grp || a.findIndex(y => y.p.grp === x.p.grp) === i);
+    if (!hits.length) { hideTip(); return; }
     showTip(`<div class="t">${esc(fmtDateLong(new Date(t)))}</div><div class="muted" style="margin-bottom:4px">${esc(hits[0].p.title)}</div>` +
       hits.map(({ s, p }) => (series.length > 1 && !combined ?`<div style="margin-top:4px">${seriesIcon(s.shape || "circle", s.color, s.dashed)}<b>${esc(s.name)}</b></div>` : "") + p.rows +
         (p.note ? `<div class="n">„${esc(p.note)}”</div>` : "")).join("") +
@@ -3001,11 +3060,9 @@ const METRIC = {
     val: x => Math.round(x.e1rm * 10) / 10, unit: "kg", fmt: v => nf(v, 1) },
   rpe: { sub: "Średnie RPE serii roboczych (wspólna skala 6–10). Sygnał pomocniczy: główną daną są wykonane powtórzenia.",
     val: x => x.rpe == null ? null : Math.round(x.rpe * 10) / 10, unit: "", fmt: v => nf(v, 1), yFixed: [6, 10] },
-  razem: { sub: "Na jednym wykresie, tylko aktualna maszyna każdego ruchu (bez starych wariantów i zamienników): ciężar najcięższej serii roboczej (linia ciągła) i szacowany 1RM (Epley, linia przerywana) na lewej osi w kg oraz średnie RPE (linia kropkowana) na prawej osi w skali 6–10. Szacowany 1RM jest mniej dokładny powyżej 10 powt. i specyficzny dla maszyny. RPE to sygnał pomocniczy: główną daną są wykonane powtórzenia." },
 };
-const RAZEM_RPE = [6, 10];   // skala prawej osi (RPE) w trybie „Razem”, jak yFixed trybu RPE
 
-// Aktualna maszyna ruchu (tryb „Razem”): maszyna z pozycji PLAN tego ruchu (albo jej wariant wydzielony z notatki, np. Chest Press (talerze)), najpóźniej używana;
+// Aktualna maszyna ruchu (widok „Analiza ćwiczenia”): maszyna z pozycji PLAN tego ruchu (albo jej wariant wydzielony z notatki, np. Chest Press (talerze)), najpóźniej używana;
 // bez starych wariantów (okres z wpisu „maszyna … inny wariant”), maszyn niepewnych i zamienników (np. Shoulder Press (Machine Plates) przy Seated Shoulder Press).
 // Ruch bez pozycji PLAN: najpóźniej używana maszyna.
 function currentMachine(f) {
@@ -3017,36 +3074,6 @@ function currentMachine(f) {
   return pool.length ? pool.reduce((b, e) => lastOf(e) > lastOf(b) ? e : b) : null;
 }
 
-// Karta ruchu w trybie „Razem”: jedna maszyna, trzy miary na jednym wykresie (ciężar, szac. 1RM: lewa oś kg; RPE: prawa oś 6–10).
-function togetherCard(host, f) {
-  const e = currentMachine(f);
-  if (!e) return false;
-  const c1 = css("--series-1"), c2 = css("--series-2"), c3 = css("--series-3");
-  const pts = e.cardProgress;
-  const e1 = x => Math.round(x.e1rm * 10) / 10, rp = x => x.rpe == null ? null : Math.round(x.rpe * 10) / 10;
-  const common = x => ({ d: x.date, note: x.note, title: x.workout.title, solo: x.solo });
-  const series = [
-    { name: "Ciężar", color: c1, shape: SHAPES[0], axis: "l", dash: "",
-      points: pts.map(x => ({ ...common(x), v: x.kg,
-        rows: tipRow("Ciężar (najcięższa seria)", `${nf(x.kg, 1)} kg × ${nf(x.reps)}`, c1) + tipRow("Szac. 1RM", kg(e1(x)), c2) +
-          (rp(x) != null ? tipRow("Średnie RPE", nf(rp(x), 1), c3) : "") + tipRow("Serie robocze", nf(x.sets)) })) },
-    { name: "Szac. 1RM", color: c2, shape: SHAPES[1], axis: "l", dash: "6 4", points: pts.map(x => ({ ...common(x), v: e1(x), noTip: true })) },
-    { name: "RPE", color: c3, shape: SHAPES[2], axis: "r", dash: "1.5 4", points: pts.filter(x => rp(x) != null).map(x => ({ ...common(x), v: rp(x), noTip: true })) },
-  ];
-  const kgPts = series[0].points, a = kgPts[0].v, b = kgPts[kgPts.length - 1].v, d = b - a;
-  const range = kgPts.length > 1 ? `${nf(a, 1)} → ${nf(b, 1)} kg` : `${nf(a, 1)} kg`;
-  const delta = kgPts.length < 2 ? "" : d > 0 ? `<span class="delta-up">▲ ${esc(nf(d, 1))} kg</span>` : d < 0 ? `<span>▼ ${esc(nf(-d, 1))} kg</span>` : `<span>bez zmian</span>`;
-  const card = document.createElement("div");
-  card.className = "mini";
-  const legend = [[SHAPES[0], c1, false, "Ciężar (lewa oś, kg)"], [SHAPES[1], c2, "6 4", "Szac. 1RM (lewa oś, kg)"], [SHAPES[2], c3, "1.5 4", "RPE (prawa oś, 6–10)"]]
-    .map(([sh, col, dash, txt]) => `<span>${seriesIcon(sh, col, dash)}${txt}</span>`).join("");
-  card.innerHTML = `<h3>${esc(FAMILIES.some(([n]) => n === f.name) ? f.name : e.name)}</h3>` +
-    `<div class="meta"><span>${esc(e.name)} · ${kgPts.length} ${plTrening(kgPts.length)} · ${esc(range)}</span>${delta}</div>` +
-    `<div class="legend card-legend">${legend}</div><div class="chart"></div>`;
-  host.appendChild(card);
-  lineChart($(".chart", card), { series, markers: markersFor(f.name), unit: "kg", fmt: v => nf(v, 1), rightFixed: RAZEM_RPE, rightFmt: v => nf(v), combined: true, drawKey: "razem:" + f.name });
-  return true;
-}
 
 // Karty progresu pokazują tylko aktywne linie: bez treningów z dni-wyjątków (wpis „wyjatek” dla *), bez maszyn z zamkniętym
 // okresem (wpis „maszyna … przed …”) i bez maszyn nieużywanych od ponad CFG.signalsActiveDays dni (licząc od najnowszego
@@ -3153,6 +3180,7 @@ function renderProgress() {
     (Object.keys(CFG.repsCompareFirst).length ? ` Sygnał w tabeli porównuje tylko ${Object.entries(CFG.repsCompareFirst).map(([n, k]) => `${k} pierwsze serie (${n})`).join(", ")}, więc może różnić się od wykresu. Pusty punkt poza linią = niepełny trening (mniej serii niż ocenianych w sygnale), bez porównania.` : "");
   const host = $("#multiples");
   host.innerHTML = "";
+  AN.items = [];
   const { fams, hidden } = moveFamilies();
   // Ćwiczenia z masą ciała mają osobne karty (suma powtórzeń zamiast kilogramów, więc nie na wspólnej osi z maszyną): jedna karta na ćwiczenie
   // albo wspólna karta z CFG.repsCards. Na wspólnej karcie ćwiczenie nieużywane (np. zastąpione) zostaje, dopóki inne ćwiczenie karty jest aktywne.
@@ -3168,12 +3196,14 @@ function renderProgress() {
     }).filter(g => sum(g.list, e => e.cardProgress.length) >= 2);
   const cards = [...fams.filter(f => f.sessions >= 2).map(f => ({ f, n: f.sessions })), ...repsCards.map(g => ({ e: g, n: sum(g.list, e => e.cardProgress.length) }))]
     .sort((a, b) => b.n - a.n);
-  let skippedReps = false;
   for (const { f, e } of cards) {
-    // Tryb „Razem”: karty ćwiczeń z masą ciała pomijam (brak ciężaru i 1RM, wartością są powtórzenia), karty ruchów z maszyną: jedna aktualna maszyna.
-    if (e && progressMode === "razem") { skippedReps = true; continue; }
-    if (e) { repsCard(host, e, M); continue; }
-    if (progressMode === "razem" && togetherCard(host, f)) continue;
+    if (e) {
+      repsCard(host, e, M);
+      const title = e.title || e.list[0].name;
+      anDecorate(host.lastElementChild, "r:" + title, title);
+      AN.items.push({ key: "r:" + title, title, kind: "reps", g: e });
+      continue;
+    }
     const series = f.list.slice(0, SERIES_VARS.length).map((e, i) => ({
       e, name: e.name, color: css(SERIES_VARS[i]), shape: SHAPES[i], dashed: e.uncertain,
       points: e.cardProgress.filter(x => M.val(x) != null).map(x => ({
@@ -3211,17 +3241,196 @@ function renderProgress() {
     }).join("");
     card.innerHTML = `<h3>${esc(single ? f.list[0].name : f.name)}</h3>${meta}<div class="chart"></div>`;
     host.appendChild(card);
+    anDecorate(card, "w:" + f.name, single ? f.list[0].name : f.name);
+    AN.items.push({ key: "w:" + f.name, title: single ? f.list[0].name : f.name, kind: "weight", f });
     if (series.length) lineChart($(".chart", card), { series, markers: markersFor(f.name), unit: M.unit, fmt: M.fmt, yFixed: M.yFixed || null, drawKey: f.name });
   }
   const once = fams.filter(f => f.sessions < 2).flatMap(f => f.list.map(e => e.name));
   const groups = new Map();
   for (const h of hidden) { if (!groups.has(h.why)) groups.set(h.why, []); groups.get(h.why).push(h.name); }
   $("#only-once").textContent = [
-    skippedReps ? "W trybie Razem nie ma karty ćwiczeń z masą ciała (unoszenie kolan i nóg): nie mają ciężaru ani szacowanego 1RM; są w trybach Ciężar i RPE." : "",
     once.length ? `Ruchy zrobione tylko raz, więc bez wykresu (są w tabeli rekordów): ${once.join(", ")}.` : "",
     hidden.length ? `Poza kartami (są w tabeli rekordów): ${[...groups].map(([why, names]) => `${why}: ${names.join(", ")}`).join("; ")}.` : "",
   ].filter(Boolean).join(" ");
 }
+
+// ---------- Analiza ćwiczenia (widok otwierany z karty progresu) ----------
+// Panel na pełną szerokość strony (telefon: pełny ekran). Jedno ćwiczenie (ruch z karty progresu) w dużym wykresie: miary do wyboru,
+// zakres czasu, aktualna maszyna (starsze warianty i zamienniki jako osobne serie bez linii łączącej po zaznaczeniu pola).
+// Układ osi: kg (ciężar, szac. 1RM) na lewej osi, RPE na prawej (6–10). Suma powtórzeń ma inną skalę niż kg, więc gdy kg są zaznaczone, idzie na
+// osobny mały wykres pod spodem (ta sama oś czasu); bez kg (np. karta brzucha) jest na lewej osi głównego wykresu. Tylko widok: bez wpływu na oceny.
+const AN = { open: false, items: [], key: null, m: { kg: true, e1rm: false, rpe: true, reps: false }, range: "cycle", old: false, trigger: null };
+const AN_MEASURES = [["kg", "Ciężar", "--series-1", ""], ["e1rm", "Szac. 1RM", "--series-2", "6 4"], ["rpe", "RPE", "--series-3", "1.5 4"], ["reps", "Suma powtórzeń", "--series-4", ""]];
+const AN_RANGES = [["cycle", "Bieżący cykl"], ["last", `Ostatnie ${CFG.recentWorkouts} treningów`], ["all", "Całość"]];
+const AN_STORE = "dashboard-analiza";
+// Wybór zapamiętany w obrębie sesji przeglądarki (sessionStorage może być niedostępne: wtedy domyślne ustawienia).
+function anLoadPrefs() {
+  try {
+    const p = JSON.parse(sessionStorage.getItem(AN_STORE) || "null");
+    if (!p) return;
+    for (const k of Object.keys(AN.m)) if (typeof (p.m || {})[k] === "boolean") AN.m[k] = p.m[k];
+    if (AN_RANGES.some(([k]) => k === p.range)) AN.range = p.range;
+    if (typeof p.old === "boolean") AN.old = p.old;
+  } catch (e) { /* bez zapamiętanego wyboru */ }
+}
+function anSavePrefs() { try { sessionStorage.setItem(AN_STORE, JSON.stringify({ m: AN.m, range: AN.range, old: AN.old })); } catch (e) { /* bez zapamiętywania */ } }
+
+// Przycisk „Szczegóły” i klikalna cała karta (klik w wykres na ekranie dotykowym pokazuje dymek, nie otwiera widoku).
+function anDecorate(card, key, title) {
+  card.dataset.an = key; card.classList.add("clickable");
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "btn an-open"; b.dataset.anOpen = key; b.textContent = "Szczegóły";
+  b.setAttribute("aria-haspopup", "dialog"); b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-label", `Szczegóły: ${title}`);
+  card.appendChild(b);
+}
+$("#multiples").addEventListener("click", ev => {
+  const card = ev.target.closest(".mini[data-an]");
+  if (!card || (ev.target.closest(".chart") && ev.pointerType === "touch")) return;
+  anOpen(card.dataset.an, card.querySelector(".an-open"));
+});
+
+// Dane ćwiczeń elementu listy: aktualna maszyna (albo ostatnio używane ćwiczenie karty brzucha) i pozostałe.
+function anMachines(it) {
+  const list = it.kind === "reps" ? it.g.list : it.f.list;
+  const withPts = list.filter(e => e.cardProgress.length);
+  const lastOf = e => +e.cardProgress[e.cardProgress.length - 1].date;
+  const cur = it.kind === "reps" ? withPts.reduce((b, e) => !b || lastOf(e) > lastOf(b) ? e : b, null) : currentMachine(it.f);
+  return { cur, older: withPts.filter(e => e !== cur).sort((a, b) => lastOf(b) - lastOf(a)) };
+}
+// Początek zakresu czasu (null = całość).
+function anStart() {
+  const ws = MODEL.workouts, latest = ws[ws.length - 1].start;
+  if (AN.range === "last") return midnight(ws[Math.max(0, ws.length - CFG.recentWorkouts)].start);
+  if (AN.range === "cycle") {
+    const from = CFG.cycleFrom.map(isoDay).filter(d => d <= latest).sort((a, b) => a - b).pop();
+    return from || (PLAN_CHANGES.length ? PLAN_CHANGES[0].date : null);
+  }
+  return null;
+}
+
+function anOpen(key, trigger) {
+  const it = AN.items.find(x => x.key === key);
+  if (!it) return;
+  AN.key = key; AN.trigger = trigger || null;
+  if (!AN.open) {
+    AN.open = true;
+    history.pushState({ an: 1 }, "");
+    for (const el of document.body.children) if (el.id !== "an" && el.tagName !== "SCRIPT") el.inert = true;
+    document.body.style.overflow = "hidden";
+  }
+  $("#an").hidden = false;
+  $("#an").scrollTop = 0;
+  anRender();
+  document.querySelectorAll(".an-open").forEach(b => b.setAttribute("aria-expanded", String(b.dataset.anOpen === key)));
+  $("#an-title").focus();
+}
+function anHide() {
+  if (!AN.open) return;
+  AN.open = false;
+  $("#an").hidden = true;
+  hideTip();
+  for (const el of document.body.children) el.inert = false;
+  document.body.style.overflow = "";
+  document.querySelectorAll(".an-open").forEach(b => b.setAttribute("aria-expanded", "false"));
+  // Powrót fokusu na kartę (po zmianie ćwiczenia w liście: na kartę aktualnie wybranego ćwiczenia).
+  const b = document.querySelector(`.an-open[data-an-open="${CSS.escape(AN.key || "")}"]`) || AN.trigger;
+  if (b && document.contains(b)) { b.focus(); setTimeout(() => { if (!AN.open && document.activeElement !== b) b.focus(); }, 0); }   // drugie ujęcie: po cofnięciu historii przeglądarka potrafi odebrać fokus
+}
+// Zamknięcie przyciskiem i Esc cofa wpis historii (jak strzałka wstecz w przeglądarce telefonu); samo zamknięcie robi popstate.
+function anClose() { if (!AN.open) return; if (history.state && history.state.an) history.back(); else anHide(); }
+addEventListener("popstate", () => anHide());
+document.addEventListener("keydown", ev => {
+  if (!AN.open) return;
+  if (ev.key === "Escape") { ev.preventDefault(); anClose(); return; }
+  if (ev.key !== "Tab") return;
+  const f = [...$("#an").querySelectorAll("button, select, input, [tabindex='0']")].filter(x => !x.disabled && x.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (ev.shiftKey && (document.activeElement === first || document.activeElement === $("#an-title"))) { ev.preventDefault(); last.focus(); }
+  else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+});
+$("#an-close").addEventListener("click", anClose);
+$("#an").addEventListener("click", ev => { if (ev.target === $("#an")) anClose(); });   // klik w tło poza panelem
+$("#an-ex").addEventListener("change", ev => { AN.key = ev.target.value; anRender(); document.querySelectorAll(".an-open").forEach(b => b.setAttribute("aria-expanded", String(b.dataset.anOpen === AN.key))); });
+for (const [k] of AN_MEASURES) $(`#an-m-${k}`).addEventListener("change", ev => { AN.m[k] = ev.target.checked; anSavePrefs(); anRender(); });
+$("#an-old").addEventListener("change", ev => { AN.old = ev.target.checked; anSavePrefs(); anRender(); });
+document.querySelectorAll("#an-range button").forEach(b => b.addEventListener("click", () => { AN.range = b.dataset.range; anSavePrefs(); anRender(); }));
+
+function anRender() {
+  const it = AN.items.find(x => x.key === AN.key) || AN.items[0];
+  if (!it) return;
+  AN.key = it.key;
+  const isReps = it.kind === "reps";
+  // Lista wyboru: wszystkie ruchy z kart progresu w kolejności kart.
+  $("#an-range button[data-range=last]").textContent = `Ostatnie ${CFG.recentWorkouts} treningów`;
+  $("#an-ex").innerHTML = AN.items.map(x => `<option value="${esc(x.key)}"${x.key === it.key ? " selected" : ""}>${esc(x.title)}</option>`).join("");
+  $("#an-title").textContent = `Analiza ćwiczenia: ${it.title}`;
+  // Miary: ćwiczenie z masą ciała nie ma ciężaru ani 1RM; suma powtórzeń jest wtedy zawsze pokazana.
+  const eff = { kg: !isReps && AN.m.kg, e1rm: !isReps && AN.m.e1rm, rpe: AN.m.rpe, reps: isReps || AN.m.reps };
+  for (const [k] of AN_MEASURES) {
+    const inp = $(`#an-m-${k}`), off = isReps && k !== "rpe" && k !== "reps", lock = isReps && k === "reps";
+    inp.checked = eff[k]; inp.disabled = off || lock;
+    inp.closest("label").classList.toggle("dis", off || lock);
+  }
+  document.querySelectorAll("#an-range button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.range === AN.range)));
+  $("#an-old").checked = AN.old;
+  const start = anStart();
+  $("#an-range-note").textContent = AN.range === "cycle" ? `Bieżący cykl: od ${start ? fmtDate(start) : "początku danych"}.` : AN.range === "last" ? `Od ${fmtDate(start)}.` : "Wszystkie treningi.";
+
+  const { cur, older } = anMachines(it);
+  const machines = [cur, ...(AN.old ? older : [])].filter(Boolean);
+  const inWin = e => e.cardProgress.filter(p => !start || +midnight(p.date) >= +start);
+  const leftKg = eff.kg || eff.e1rm, repsSep = eff.reps && leftKg, repsMain = eff.reps && !leftKg, rpeRight = eff.rpe && (leftKg || repsMain);
+  const SHAPE = i => SHAPES[i % SHAPES.length];
+  const rnd = v => Math.round(v * 10) / 10;
+  const build = (mi, e, m) => {
+    const [k, name, tok, dash] = AN_MEASURES.find(x => x[0] === m), color = css(tok);
+    const pts = inWin(e).filter(p => (m === "rpe" ? p.rpe != null : true));
+    return { name, color, shape: SHAPE(mi), dash: mi === 0 ? dash : "", axis: m === "rpe" && rpeRight ? "r" : "l", mach: e.name,
+      points: pts.map(p => {
+        const c = css("--series-1"), c2 = css("--series-2"), c3 = css("--series-3"), c4 = css("--series-4");
+        const rows = (mi > 0 || AN.old ? tipRow("Maszyna", e.name) : "") + (isReps
+          ? tipRow("Serie", p.reps.join(" / ")) + tipRow("Suma powtórzeń", nf(p.sum), c4) + (p.full ? "" : tipRow("Niepełny trening", `${p.reps.length} z ${p.first} ocenianych serii`))
+          : tipRow("Ciężar (najcięższa seria)", `${nf(p.kg, 1)} kg × ${nf(p.reps)}`, c) + tipRow("Serie robocze", p.setsTxt) + tipRow("Suma powtórzeń", nf(p.sum), c4) + tipRow("Szac. 1RM", kg(rnd(p.e1rm)), c2)) +
+          (p.rpe != null ? tipRow("Średnie RPE", nf(rnd(p.rpe), 1), c3) : "") + (p.failure ? tipRow("Do upadku", "tak") : "");
+        return { d: p.date, v: m === "kg" ? p.kg : m === "e1rm" ? rnd(p.e1rm) : m === "rpe" ? rnd(p.rpe) : p.sum, note: p.note, title: p.workout.title, rows, grp: e.name,
+          solo: mi > 0 || !!p.solo, off: m === "reps" && isReps && !p.full };
+      }) };
+  };
+  const mk = (list) => machines.flatMap((e, mi) => list.map(m => build(mi, e, m))).filter(s => s.points.length);
+  const mainList = ["kg", "e1rm", "rpe"].filter(m => eff[m]).concat(repsMain ? ["reps"] : []);
+  const mainSeries = mk(mainList), repsSeries = repsSep ? mk(["reps"]) : [];
+  const markers = markersFor(isReps ? familyOf(it.g.list[0].name) : it.f.name, isReps ? it.g.list.map(e => e.name) : []);
+
+  // Opis i legenda.
+  const n = cur ? inWin(cur).length : 0;
+  let range = "";
+  if (cur && n) {
+    const p = inWin(cur), a = p[0], b = p[p.length - 1];
+    range = isReps ? `, suma ${nf(a.sum)} → ${nf(b.sum)} powt.` : `, ${nf(a.kg, 1)} → ${nf(b.kg, 1)} kg`;
+  }
+  $("#an-meta").textContent = cur ? `Aktualnie: ${cur.name} · ${n} ${plTrening(n)} w zakresie${range}` : "Brak ćwiczenia z danymi.";
+  const mIcon = i => `<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><path d="${shapePath(SHAPE(i), 7, 7, 4)}" fill="${css("--text-secondary")}"/></svg>`;
+  const axisTxt = { kg: "lewa oś, kg", e1rm: "lewa oś, kg", rpe: rpeRight ? "prawa oś, 6–10" : "oś 6–10", reps: repsSep ? "osobny wykres poniżej" : "lewa oś, powt." };
+  $("#an-legend").innerHTML = AN_MEASURES.filter(([k]) => eff[k]).map(([k, name, tok, dash]) =>
+    `<span>${seriesIcon("circle", css(tok), dash || false)}${esc(name)} (${axisTxt[k]})</span>`).join("") +
+    (AN.old && older.length ? machines.map((e, i) => `<span>${mIcon(i)}${esc(e.name)}${i === 0 ? " (aktualna, z linią)" : " (starsza, same punkty)"}</span>`).join("") : "");
+  $("#an-reps-wrap").hidden = !repsSep;
+
+  const host = $("#an-chart");
+  const noSel = !mainList.length && !repsSep;
+  $("#an-note").textContent = noSel ? "Zaznacz co najmniej jedną miarę." : !mainSeries.length && !repsSeries.length ? "Brak treningów w wybranym zakresie czasu." : "";
+  host.innerHTML = ""; $("#an-reps").innerHTML = "";
+  const H = innerWidth < 700 ? 280 : 360;
+  if (mainSeries.length) {
+    const unit = repsMain ? "powt." : leftKg ? "kg" : "";
+    lineChart(host, { series: mainSeries, markers, height: H, unit, fmt: leftKg ? v => nf(v, 1) : repsMain ? v => nf(v) : v => nf(v, 1),
+      yFixed: !leftKg && !repsMain ? RAZEM_RPE : null, rightFixed: rpeRight ? RAZEM_RPE : null, rightFmt: v => nf(v), combined: true });
+  }
+  if (repsSeries.length) lineChart($("#an-reps"), { series: repsSeries, markers, height: 170, unit: "powt.", fmt: v => nf(v), combined: true });
+}
+const RAZEM_RPE = [6, 10];   // skala osi RPE w widoku analizy (jak w trybie RPE kart)
+anLoadPrefs();
 
 // ---------- Grupy mięśniowe ----------
 const MUSCLE_RULES = [
@@ -3629,6 +3838,7 @@ function load(text) {
   MODEL = model;
   $("#error").hidden = true;
   render();
+  if (AN.open) anRender();
 }
 
 document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
@@ -3658,7 +3868,7 @@ addEventListener("resize", () => {
   if (innerWidth === lastW) return;
   lastW = innerWidth;
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => MODEL && renderCharts(), 150);
+  resizeTimer = setTimeout(() => { if (MODEL) { renderCharts(); if (AN.open) anRender(); } }, 150);
 });
 
 // ---------- Menu skoków ----------
